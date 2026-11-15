@@ -28,7 +28,7 @@ For an HTTPS deployment behind a reverse proxy, set `APP_ORIGIN` to the public o
 
 ## Gameplay and workout controls
 
-Your current power is compared with the workout's target power. The game displays power accuracy, workout intervals, and progress in the HUD. Clearing consecutive donut gates in-zone builds your combo multiplier and awards tiered **Ring Streak** bonuses every 15 rings (`+250` points per tier, from *Nice Streak!* to *Legendary!*) with visual splash banners and ascending arpeggios. FTP (200 W by default; adjustable from 50 to 600 W) is used to calculate power targets specified as a percentage of FTP. Use **Donut Gate Accuracy** on the **Pairing & Rules** screen to set the allowed power deviation (40 W by default).
+Your current power is compared with the workout's target power. The game displays power accuracy, workout intervals, and progress in the HUD; watts, heart rate, and cadence are shown large at the top center, points and speed at the top right. Clearing consecutive donut gates in-zone builds your combo multiplier and awards tiered **Ring Streak** bonuses every 15 rings (`+250` points per tier, from *Nice Streak!* to *Legendary!*) with visual splash banners and ascending arpeggios. A full-width streak bar above the timeline fills up ring by ring until the next bonus. FTP (200 W by default; adjustable from 50 to 600 W) is used to calculate power targets specified as a percentage of FTP. Use **Donut Gate Accuracy** on the **Pairing & Rules** screen to set the allowed power deviation (40 W by default).
 
 Available workouts can be filtered by duration and physiological intensity:
 
