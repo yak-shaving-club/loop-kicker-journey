@@ -2189,20 +2189,23 @@ class DragonSky3DEngine {
         this.updateGhost(0);
     }
 
+    // Ghost avatar position in % of the arena, or null when it is hidden or behind the camera
+    getGhostScreenPosition() {
+        if (!this.ghostGroup || !this.ghostGroup.visible || !this.camera) return null;
+        const p = this.ghostGroup.position.clone().project(this.camera);
+        if (p.z > 1 || Math.abs(p.x) > 1 || Math.abs(p.y) > 1) return null;
+        return { xPct: (p.x + 1) * 50, yPct: (1 - p.y) * 50 };
+    }
+
     updateGhost(dt) {
         if (!this.ghostGroup) return;
         if (!state.ghost) {
             this.ghostGroup.visible = false;
             return;
         }
-        const sec = state.elapsedSec;
-        const subSec = state.isRunning ? Math.max(0, Math.min(1, this.subSec || 0)) : 0;
-        const before = getGhostRideTotalsAfterSecond(sec - 1);
-        const after = getGhostRideTotalsAfterSecond(sec);
-        const ghostDistance = before.distance + (after.distance - before.distance) * subSec;
-        const ownDistance = state.totalDistanceMeters + (state.isRunning ? (state.speedKmh / 3.6) * subSec : 0);
-        const zOffset = Math.max(-GHOST_MAX_Z_OFFSET, Math.min(GHOST_MAX_Z_OFFSET, (ghostDistance - ownDistance) * GHOST_WORLD_UNITS_PER_METER));
-        const ghostZ = this.flightZ - zOffset;
+        // Everyone flies at the same forward speed; the ghost leads the avatar by one second (one gate)
+        const sec = state.elapsedSec + GHOST_LEAD_SECONDS;
+        const ghostZ = this.flightZ - this.gateSpacingZ * GHOST_LEAD_SECONDS;
 
         const desiredY = wattsToSkyAltitudeY(getGhostRideWattsAtSecond(sec), state.ftp, state.currentGradientPct);
         if (typeof this.ghostCurrentY !== 'number' || isNaN(this.ghostCurrentY)) {
@@ -2948,8 +2951,7 @@ class DragonSky3DEngine {
             return { canFire: false, nextObs: null, secondsUntilReach: Infinity, pointCost: FIREBALL_POINT_COST };
         }
         const distZ = this.flightZ - nextObs.worldZ;
-        const currentForwardSpeed = Math.max(58.0, (state.speedKmh || 34) * 2.35);
-        const secondsUntilReach = distZ / currentForwardSpeed;
+        const secondsUntilReach = distZ / this.gateSpacingZ;
         const canFire = distZ >= -2.5 && secondsUntilReach <= FIRE_WINDOW_SECONDS;
         return {
             canFire,
@@ -3013,7 +3015,7 @@ class DragonSky3DEngine {
 
         this.scene.add(fireballGroup);
 
-        const fireballSpeed = Math.max(290.0, (state.speedKmh || 35) * 4.8);
+        const fireballSpeed = 290.0;
         const dir = new THREE.Vector3(0, 0, -1);
 
         nextObs.targetedByFireball = true;
@@ -3677,7 +3679,7 @@ class DragonSky3DEngine {
             }
 
             const distAhead = this.flightZ - obs.worldZ;
-            const secUntilObs = distAhead / Math.max(58.0, forwardSpeed || 68.0);
+            const secUntilObs = distAhead / this.gateSpacingZ;
             if (distAhead >= 0 && secUntilObs <= 3.0) {
                 obstacleInStrikeZone = true;
                 obs.warnRingMat.color.setHex(0xef4444);

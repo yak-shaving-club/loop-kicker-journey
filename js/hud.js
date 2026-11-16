@@ -519,6 +519,7 @@ function executeWorkoutTick() {
         state.comboMultiplier = 1.0;
         state.lastPointsAwarded = 0;
     }
+    spawnGhostCollectedPoints();
 
     state.samples.push({
         timestampMs: Date.now(),
@@ -636,7 +637,7 @@ function resetWorkoutSession() {
     state.elapsedSec = 0;
     state.startTimeMs = null;
     if (state.workout) {
-        state.gradientProfile = generateTerrainGradientProfile(state.workout.totalDuration, state.resistanceMode);
+        state.gradientProfile = buildSessionGradientProfile();
     }
     regenerateRandomCanyonPath();
     syncGradientAtSecond(0);

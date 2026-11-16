@@ -1,11 +1,11 @@
 // =========================================================================
 // 10. EVENT LISTENERS, SPACEBAR OBSTACLE DEFENSE & INITIALIZATION
 // =========================================================================
-function applyFtpWatts(rawValue) {
+function applyFtpWatts(rawValue, persist = true) {
     const val = parseInt(rawValue, 10);
     if (!isNaN(val) && val >= 50 && val <= 600) {
         state.ftp = val;
-        localStorage.setItem('loop_kicker_journey_ftp', String(val));
+        if (persist) localStorage.setItem('loop_kicker_journey_ftp', String(val));
         if (state.simMode && state.simAutoJitter) {
             const targetW = getTargetWattsAtSecond(state.workout, state.elapsedSec, state.ftp);
             state.actualWatts = targetW;
@@ -190,6 +190,10 @@ if (compactSteeringToggleCheck) {
 // Spacebar handler to destroy incoming 3D obstacles with Dragon Fire & Left/Right keyboard bindings to steer the dragon
 window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    if (isGhostBattlePanelOpen()) {
+        if (e.code === 'Escape') closeGhostBattlePanel();
+        return;
+    }
     if (state.currentScreen === 'splash' && (e.code === 'Enter' || e.code === 'Space')) {
         e.preventDefault();
         soundEngine.init();
@@ -536,7 +540,7 @@ document.getElementById('accuracyToleranceInput').addEventListener('input', (e) 
 
 function regenerateSessionWindProfile() {
     if (state.workout) {
-        state.gradientProfile = generateTerrainGradientProfile(state.workout.totalDuration, state.resistanceMode);
+        state.gradientProfile = buildSessionGradientProfile();
     }
     syncGradientAtSecond(state.elapsedSec);
     if (state.simMode && state.simAutoJitter) {
@@ -562,6 +566,7 @@ function regenerateSessionWindProfile() {
 document.getElementById('resistanceModeSelect').addEventListener('change', (e) => {
     state.resistanceMode = e.target.value;
     regenerateSessionWindProfile();
+    syncRerollWindProfileButton();
 });
 
 document.getElementById('rerollWindProfileBtn').addEventListener('click', () => {
@@ -1053,6 +1058,14 @@ document.getElementById('splashStartBtn').addEventListener('click', () => {
     soundEngine.init();
     setScreen('pairing');
 });
+document.getElementById('splashGhostBattleBtn').addEventListener('click', () => {
+    openGhostBattlePanel();
+});
+document.getElementById('ghostBattleCloseBtn').addEventListener('click', closeGhostBattlePanel);
+document.getElementById('ghostBattlePanel').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeGhostBattlePanel();
+});
+initGhostBattleButton();
 document.getElementById('wizardReturnToGameBtn').addEventListener('click', () => {
     setScreen('game');
 });

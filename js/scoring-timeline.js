@@ -458,6 +458,22 @@ function spawnFloatingScorePopup(points, isBullseye, ratioPct, customSubtitle) {
     setTimeout(() => el.remove(), 1150);
 }
 
+// screenPos: { xPct, yPct } of the ghost avatar inside the arena, or null to use a fallback spot
+function spawnGhostScorePopup(points, screenPos) {
+    const container = document.getElementById('floatingScoreContainer');
+    const anchor = document.createElement('div');
+    anchor.className = 'absolute';
+    anchor.style.left = `${screenPos ? screenPos.xPct : 62}%`;
+    anchor.style.top = `${screenPos ? screenPos.yPct : 36}%`;
+    anchor.style.transform = 'translate(-50%, -100%)';
+    const el = document.createElement('div');
+    el.className = 'floating-score font-black font-mono text-center select-none text-cyan-200/80 text-lg italic drop-shadow-[0_0_10px_rgba(34,211,238,0.85)]';
+    el.innerHTML = `+${formatSwissNumber(points)} PTS<div class="text-[10px] font-bold uppercase tracking-wider text-cyan-300/80">GHOST</div>`;
+    anchor.appendChild(el);
+    container.appendChild(anchor);
+    setTimeout(() => anchor.remove(), 1150);
+}
+
 const RING_STREAK_MILESTONE = 15;
 const RING_STREAK_BONUS_PER_TIER = 250;
 const RING_STREAK_TITLES = ['NICE STREAK!', 'ON FIRE!', 'UNSTOPPABLE!', 'DRAGON MASTER!', 'LEGENDARY!'];

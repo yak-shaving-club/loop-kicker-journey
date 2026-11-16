@@ -86,10 +86,9 @@ const state = {
 
 function generateTerrainGradientProfile(totalDurationSec, mode) {
     const total = Math.max(1, Math.ceil(totalDurationSec));
-    const profile = [];
+    const grades = [];
     let current = 0.0;
     let target = 0.0;
-    let elevationMeters = 0.0;
     let ticksRemaining = 0;
 
     for (let s = 0; s <= total; s++) {
@@ -126,18 +125,39 @@ function generateTerrainGradientProfile(totalDurationSec, mode) {
                 current = +(current + Math.sign(diff) * maxStep).toFixed(2);
             }
         }
+        grades.push([current, target]);
+    }
+    return buildGradientProfileFromGrades(grades);
+}
+
+// Per-second [currentPct, targetPct] pairs -> profile entries with accumulated elevation
+function buildGradientProfileFromGrades(grades) {
+    let elevationMeters = 0.0;
+    return grades.map(([current, target], s) => {
         if (s > 0) {
             elevationMeters += 8.5 * (current / 100.0);
         }
-        profile.push({ current, target, elevationMeters: +elevationMeters.toFixed(2) });
-    }
-    return profile;
+        return { current, target, elevationMeters: +elevationMeters.toFixed(2) };
+    });
+}
+
+// Racing a ghost in its recorded mode reuses its wind course, so the gates match the recording
+function isGhostWindCourseActive() {
+    const ghost = state.ghost;
+    return Boolean(ghost && ghost.gradientProfile && state.workout
+        && ghost.resistanceMode === state.resistanceMode
+        && ghost.gradientProfile.length >= Math.ceil(state.workout.totalDuration) + 1);
+}
+
+function buildSessionGradientProfile() {
+    if (isGhostWindCourseActive()) return state.ghost.gradientProfile;
+    return generateTerrainGradientProfile(state.workout.totalDuration, state.resistanceMode);
 }
 
 function syncGradientAtSecond(sec) {
     if (!state.gradientProfile || state.gradientProfile.length === 0) {
         if (state.workout) {
-            state.gradientProfile = generateTerrainGradientProfile(state.workout.totalDuration, state.resistanceMode);
+            state.gradientProfile = buildSessionGradientProfile();
         } else {
             state.currentGradientPct = 0.0;
             state.targetGradientPct = 0.0;
@@ -494,10 +514,9 @@ function getSimulatedTurnDerivativeX(worldZ) {
 }
 
 const CANYON_MAX_STEER_OFFSET_X = 24.0;
-// Ghost ride rendering: flies beside the course centerline; the distance gap is shown as a clamped forward/backward offset
+// Ghost ride rendering: flies beside the course centerline, a fixed lead ahead of the avatar
 const GHOST_LATERAL_OFFSET_X = 9.0;
-const GHOST_WORLD_UNITS_PER_METER = 1.5;
-const GHOST_MAX_Z_OFFSET = 60.0;
+const GHOST_LEAD_SECONDS = 1;
 const DRAGON_STEER_SPEED_X = 20.0;
 const DRAGON_HEADING_TURN_RATE = 1.15; // radians/sec yaw rate when steering left/right like a plane
 const DRAGON_MAX_HEADING_ANGLE = 0.72; // max heading angle (~41 degrees)
