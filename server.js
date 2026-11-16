@@ -186,6 +186,7 @@ async function handleEscargozzledScoresApi(request, response) {
 function getStaticFile(pathname) {
     if (pathname === '/' || pathname === '/index.html' || pathname === '/loop-kicker-journey.html') return 'index.html';
     if (pathname === '/escargozzled/' || pathname === '/escargozzled/index.html') return 'escargozzled/index.html';
+    if (pathname === '/escargozzled/sterzo-challenge-codes.js') return pathname.slice(1);
     if (/^\/escargozzled\/docs\/screenshots\/[a-z0-9-]+\.png$/i.test(pathname)) return pathname.slice(1);
     if (pathname === '/escargozzled/world3d.js') return pathname.slice(1);
     if (/^\/js\/[a-z0-9-]+\.js$/i.test(pathname) || pathname === '/css/styles.css') return pathname.slice(1);
@@ -217,7 +218,7 @@ async function handleRequest(request, response) {
         return;
     }
 
-    if (url.pathname === ESCARGOZZLED_SCORES_API) {
+    if (url.pathname === ESCARGOZZLED_SCORES_API || url.pathname === '/api/scores') {
         await handleEscargozzledScoresApi(request, response);
         return;
     }
