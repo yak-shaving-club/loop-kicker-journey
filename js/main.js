@@ -140,6 +140,7 @@ function setSimAutoFollow(checked) {
         const readout = document.getElementById('simWattReadout');
         if (slider) slider.value = targetW;
         if (readout) readout.textContent = `${targetW} W`;
+        syncLiveFlightSpeed();
         updateLiveHud();
     }
 }
@@ -225,6 +226,7 @@ window.addEventListener('keydown', (e) => {
         state.actualWatts = newWatts;
         slider.value = newWatts;
         document.getElementById('simWattReadout').textContent = `${newWatts} W`;
+        syncLiveFlightSpeed();
         updateLiveHud();
     }
 });
@@ -545,6 +547,7 @@ function regenerateSessionWindProfile() {
         document.getElementById('simWattSlider').value = targetW;
         document.getElementById('simWattReadout').textContent = `${targetW} W`;
     }
+    syncLiveFlightSpeed();
     if (dragon3D) {
         dragon3D.refreshCanyonElevationProfile();
     }
@@ -574,6 +577,7 @@ document.getElementById('simWattSlider').addEventListener('input', (e) => {
     setSimAutoFollow(false);
     state.actualWatts = parseInt(e.target.value, 10) || 0;
     document.getElementById('simWattReadout').textContent = `${state.actualWatts} W`;
+    syncLiveFlightSpeed();
     updateLiveHud();
 });
 
@@ -582,6 +586,7 @@ document.getElementById('simSnapTargetBtn').addEventListener('click', () => {
     state.actualWatts = targetW;
     document.getElementById('simWattSlider').value = targetW;
     document.getElementById('simWattReadout').textContent = `${targetW} W`;
+    syncLiveFlightSpeed();
     updateLiveHud();
 });
 

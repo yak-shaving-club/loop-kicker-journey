@@ -69,9 +69,11 @@ function setScreen(screenName) {
     });
 }
 
-function estimateSpeedMpsFromWatts(watts) {
-    if (watts <= 0) return 0;
-    return Math.max(0, Math.pow(watts / 0.22, 1 / 3));
+function syncLiveFlightSpeed(gradientPct = state.currentGradientPct) {
+    const hasSpeedSensor = typeof bleSpeedSensor !== 'undefined' && bleSpeedSensor.connected;
+    const rawWheelKmh = hasSpeedSensor ? state.rawWheelSpeedKmh : null;
+    state.speedKmh = computeFlightSpeedKmh(state.actualWatts, gradientPct, rawWheelKmh);
+    return state.speedKmh;
 }
 
 function recordKickrWattReading(watts, nowMs = performance.now()) {
@@ -162,7 +164,7 @@ const bleCadenceSensor = new BleCyclingSpeedCadenceSensor(
             state.cadence = Math.max(0, Math.round(measurement.cadence));
         }
         if (!bleSpeedSensor.connected && measurement.speedKmh !== null && measurement.speedKmh !== undefined) {
-            state.speedKmh = Math.max(0, measurement.speedKmh);
+            state.speedKmh = computeFlightSpeedKmh(state.actualWatts, state.currentGradientPct, measurement.speedKmh);
         }
         updateLiveHud();
     },
@@ -188,7 +190,8 @@ const bleSpeedSensor = new BleCyclingSpeedCadenceSensor(
     'speed',
     (measurement) => {
         if (measurement.speedKmh !== null && measurement.speedKmh !== undefined) {
-            state.speedKmh = Math.max(0, measurement.speedKmh);
+            state.rawWheelSpeedKmh = Math.max(0, measurement.speedKmh);
+            syncLiveFlightSpeed();
         }
         if (!bleCadenceSensor.connected && measurement.cadence !== null && measurement.cadence !== undefined) {
             state.cadence = Math.max(0, Math.round(measurement.cadence));
@@ -312,13 +315,7 @@ const bleTrainer = new WahooKickrBluetooth(
                 state.cadence = 85;
             }
         }
-        if (!bleSpeedSensor.connected) {
-            if (telemetry.speedKmh !== null && telemetry.speedKmh !== undefined) {
-                state.speedKmh = telemetry.speedKmh;
-            } else {
-                state.speedKmh = estimateSpeedMpsFromWatts(state.actualWatts) * 3.6;
-            }
-        }
+        syncLiveFlightSpeed();
         updateLiveHud();
     },
     (status, label) => {
@@ -346,9 +343,7 @@ const bleRower = new BleConcept2Rower(
         if (!bleCadenceSensor.connected && telemetry.cadence !== null && telemetry.cadence !== undefined) {
             state.cadence = Math.max(0, Math.round(telemetry.cadence));
         }
-        if (!bleSpeedSensor.connected && telemetry.speedKmh !== null && telemetry.speedKmh !== undefined) {
-            state.speedKmh = Math.max(0, telemetry.speedKmh);
-        }
+        syncLiveFlightSpeed();
         const rowerHeartRate = telemetry.heartRate || null;
         if (!bleHrmSensor.connected && rowerHeartRate !== state.heartRate) {
             state.heartRate = rowerHeartRate;

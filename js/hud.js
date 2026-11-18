@@ -398,10 +398,8 @@ function executeWorkoutTick() {
         if (!bleCadenceSensor.connected) {
             state.cadence = state.actualWatts > 0 ? Math.round(88 + (Math.random() - 0.5) * 6) : 0;
         }
-        if (!bleSpeedSensor.connected) {
-            state.speedKmh = estimateSpeedMpsFromWatts(state.actualWatts) * 3.6;
-        }
     }
+    syncLiveFlightSpeed(state.currentGradientPct);
 
     const isFtpTest = Boolean(state.workout && state.workout.isFtpTest);
     const hasDedicatedCadenceZero = !state.simMode && bleCadenceSensor.connected && state.cadence <= 0 && state.actualWatts < 20;
@@ -410,7 +408,7 @@ function executeWorkoutTick() {
     // Stop forward motion and workout progression when the user is not generating any watts
     if (riderStoppedPedaling) {
         if (!bleCadenceSensor.connected) state.cadence = 0;
-        if (!bleSpeedSensor.connected) state.speedKmh = 0;
+        state.speedKmh = 0;
         state.streakSeconds = 0;
         state.comboMultiplier = 1.0;
         state.lastPointsAwarded = 0;
@@ -533,6 +531,7 @@ function executeWorkoutTick() {
             slider.value = state.actualWatts;
             document.getElementById('simWattReadout').textContent = `${state.actualWatts} W`;
         }
+        syncLiveFlightSpeed(state.currentGradientPct);
     }
 
     updateLiveHud();
@@ -619,6 +618,7 @@ function resetWorkoutSession() {
     }
     regenerateRandomCanyonPath();
     syncGradientAtSecond(0);
+    syncLiveFlightSpeed(state.currentGradientPct);
     state.totalDistanceMeters = 0;
     state.totalScore = 0;
     state.lastPointsAwarded = 0;
@@ -669,7 +669,7 @@ function finishWorkoutAndShowSummary() {
             actualWatts: state.actualWatts || targetWatts,
             heartRate: state.heartRate,
             cadence: state.cadence || 85,
-            speedMps: estimateSpeedMpsFromWatts(state.actualWatts || targetWatts),
+            speedMps: estimateSpeedMpsFromWatts(state.actualWatts || targetWatts, state.currentGradientPct),
             distanceMeters: 10,
             inZone: true,
             isBullseye: false,

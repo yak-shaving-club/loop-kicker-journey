@@ -109,9 +109,22 @@ class DragonSky3DEngine {
         this.neckSegments = [];
         this.tailSegments = [];
 
-        this.firstGateLeadZ = 60;
+        this.firstGateLeadZ = FIRST_GATE_LEAD_Z;
+        this.firstGateLeadTimeSec = FIRST_GATE_LEAD_TIME_SEC;
         this.nextGateZ = -this.firstGateLeadZ;
-        this.gateSpacingZ = 68;
+        this.gateSpacingZ = DEFAULT_GATE_SPACING_Z;
+        this.currentForwardSpeed = 0;
+        this.activeSpacingWatts = 0;
+        this.anchorCourseSec = -this.firstGateLeadTimeSec;
+        this.anchorFloorY = 0;
+        this.courseCumDistZ = null;
+        this.courseCumElevY = null;
+        this.courseLookupWatts = -1;
+        this.courseLookupWheelKmh = -1;
+        this.courseLookupProfileRef = null;
+        this.hasNonZeroTerrainGrade = false;
+        this.lastTerrainSyncWatts = -1;
+        this.lastHudSyncedSpeedKmh = -1;
         this.nextGateWorkoutSec = 0;
         this.baseElapsedSec = 0;
         this.lastSyncedElapsedSec = 0;
@@ -627,22 +640,198 @@ class DragonSky3DEngine {
     }
 
     /**
+     * Resolves the positive reference watts used for 3D gate spacing.
+     * Never collapses to 0 when pedaling stops so pausing at 0 W freezes flight without shrinking gate spacing.
+     */
+    getInitialActiveSpacingWatts() {
+        const pedaledW = Number(state.actualWatts) || 0;
+        if (pedaledW > 0) return pedaledW;
+        if (this.activeSpacingWatts > 0) return this.activeSpacingWatts;
+        const fallbackTarget = state.workout
+            ? getTargetWattsAtSecond(state.workout, state.elapsedSec || 0, state.ftp)
+            : (state.ftp || 200);
+        return Math.max(60, Number(fallbackTarget) || 200);
+    }
+
+    /**
+     * Local 3D forward speed / Donut Gate spacing (world Z units per workout second) at `courseSec`
+     * for active `watts` and the smooth terrain gradient at `courseSec`.
+     */
+    getSpacingSpeedAtCourseSec(courseSec, watts = this.activeSpacingWatts) {
+        const activeW = watts > 0 ? watts : this.getInitialActiveSpacingWatts();
+        const gradePct = getSmoothGradientPctAtSecond(courseSec);
+        const hasWheelSpeed = typeof bleSpeedSensor !== 'undefined'
+            && bleSpeedSensor.connected
+            && Number.isFinite(state.rawWheelSpeedKmh)
+            && state.rawWheelSpeedKmh > 0;
+        if (hasWheelSpeed) {
+            const slopedKmh = computeFlightSpeedKmh(activeW, gradePct, state.rawWheelSpeedKmh);
+            return getGateSpacingZForSpeedMps(slopedKmh / 3.6);
+        }
+        return getGateSpacingZForWattsAndGrade(activeW, gradePct);
+    }
+
+    /**
+     * Precomputes cumulative 3D course distance Z(s) and canyon floor elevation Y(s) across workout seconds
+     * so Donut Gate distance dynamically tracks uphill/downhill speed with O(1) forward lookup and O(log N) inverse lookup.
+     */
+    ensureCourseSpacingLookup(forceRebuild = false) {
+        const activeW = this.activeSpacingWatts > 0
+            ? this.activeSpacingWatts
+            : this.getInitialActiveSpacingWatts();
+        if (this.activeSpacingWatts <= 0) {
+            this.activeSpacingWatts = activeW;
+        }
+        const hasWheelSpeed = typeof bleSpeedSensor !== 'undefined'
+            && bleSpeedSensor.connected
+            && Number.isFinite(state.rawWheelSpeedKmh)
+            && state.rawWheelSpeedKmh > 0;
+        const wheelKey = hasWheelSpeed ? state.rawWheelSpeedKmh : -1;
+        const profileRef = state.gradientProfile || null;
+        const desiredMaxSec = Math.max(
+            120,
+            Math.ceil((state.workout ? state.workout.totalDuration : 600) + 60)
+        );
+        const currentMaxSec = this.courseCumDistZ ? (this.courseCumDistZ.length - 1) : -1;
+
+        if (
+            !forceRebuild &&
+            this.courseCumDistZ &&
+            this.courseCumElevY &&
+            currentMaxSec >= desiredMaxSec &&
+            this.courseLookupProfileRef === profileRef &&
+            Math.abs(activeW - this.courseLookupWatts) <= 0.04 &&
+            Math.abs(wheelKey - this.courseLookupWheelKmh) <= 0.04
+        ) {
+            return;
+        }
+
+        const maxSec = Math.max(desiredMaxSec, currentMaxSec > 0 ? currentMaxSec : desiredMaxSec);
+        const cumDist = (this.courseCumDistZ && this.courseCumDistZ.length === maxSec + 1)
+            ? this.courseCumDistZ
+            : new Float64Array(maxSec + 1);
+        const cumElev = (this.courseCumElevY && this.courseCumElevY.length === maxSec + 1)
+            ? this.courseCumElevY
+            : new Float64Array(maxSec + 1);
+
+        cumDist[0] = 0.0;
+        cumElev[0] = 0.0;
+        let nonZeroGrade = false;
+        let prevSpeed = this.getSpacingSpeedAtCourseSec(0, activeW);
+        let prevGrade = getSmoothGradientPctAtSecond(0);
+        if (Math.abs(prevGrade) > 1e-4) nonZeroGrade = true;
+
+        for (let s = 1; s <= maxSec; s++) {
+            const midSec = s - 0.5;
+            const midSpeed = this.getSpacingSpeedAtCourseSec(midSec, activeW);
+            const midGrade = getSmoothGradientPctAtSecond(midSec);
+            const nextSpeed = this.getSpacingSpeedAtCourseSec(s, activeW);
+            const nextGrade = getSmoothGradientPctAtSecond(s);
+            if (!nonZeroGrade && (Math.abs(midGrade) > 1e-4 || Math.abs(nextGrade) > 1e-4)) {
+                nonZeroGrade = true;
+            }
+            const stepDist = (prevSpeed + 4.0 * midSpeed + nextSpeed) / 6.0;
+            const stepElev = (
+                prevSpeed * prevGrade +
+                4.0 * midSpeed * midGrade +
+                nextSpeed * nextGrade
+            ) / 6.0 * 0.01 * CANYON_SLOPE_VISUAL_SCALE;
+
+            cumDist[s] = cumDist[s - 1] + stepDist;
+            cumElev[s] = cumElev[s - 1] + stepElev;
+            prevSpeed = nextSpeed;
+            prevGrade = nextGrade;
+        }
+
+        this.courseCumDistZ = cumDist;
+        this.courseCumElevY = cumElev;
+        this.courseLookupWatts = activeW;
+        this.courseLookupWheelKmh = wheelKey;
+        this.courseLookupProfileRef = profileRef;
+        this.hasNonZeroTerrainGrade = nonZeroGrade;
+    }
+
+    evalCourseDistIntegral(courseSec) {
+        this.ensureCourseSpacingLookup();
+        const cumDist = this.courseCumDistZ;
+        const maxSec = cumDist.length - 1;
+        if (!Number.isFinite(courseSec)) return 0.0;
+        if (courseSec <= 0) {
+            return courseSec * this.getSpacingSpeedAtCourseSec(0, this.courseLookupWatts);
+        }
+        if (courseSec >= maxSec) {
+            return cumDist[maxSec] + (courseSec - maxSec) * this.getSpacingSpeedAtCourseSec(maxSec, this.courseLookupWatts);
+        }
+        const idx = Math.floor(courseSec);
+        const frac = courseSec - idx;
+        return cumDist[idx] + (cumDist[idx + 1] - cumDist[idx]) * frac;
+    }
+
+    evalCourseElevIntegral(courseSec) {
+        this.ensureCourseSpacingLookup();
+        if (!this.hasNonZeroTerrainGrade || !Number.isFinite(courseSec)) return 0.0;
+        const cumElev = this.courseCumElevY;
+        const maxSec = cumElev.length - 1;
+        if (courseSec <= 0) {
+            const s0 = this.getSpacingSpeedAtCourseSec(0, this.courseLookupWatts);
+            const g0 = getSmoothGradientPctAtSecond(0);
+            return courseSec * s0 * (g0 * 0.01) * CANYON_SLOPE_VISUAL_SCALE;
+        }
+        if (courseSec >= maxSec) {
+            return cumElev[maxSec];
+        }
+        const idx = Math.floor(courseSec);
+        const frac = courseSec - idx;
+        return cumElev[idx] + (cumElev[idx + 1] - cumElev[idx]) * frac;
+    }
+
+    /**
+     * Maps continuous workout second `courseSec` to 3D `worldZ`, anchored at `(this.anchorCourseSec, this.flightZ)`.
+     * Distance between consecutive gates k and k + 1 automatically equals the integrated speed over [k, k + 1].
+     */
+    workoutSecToWorldZ(courseSec) {
+        this.ensureCourseSpacingLookup();
+        return this.flightZ - (this.evalCourseDistIntegral(courseSec) - this.evalCourseDistIntegral(this.anchorCourseSec));
+    }
+
+    /**
      * Maps a 3D worldZ coordinate along the canyon course to its corresponding continuous workout second,
      * aligned so that every donut gate at `gate.worldZ` sits on the exact slope of `gate.workoutSec`.
      */
     worldZToWorkoutSec(worldZ) {
-        return this.baseElapsedSec + (-this.firstGateLeadZ - worldZ) / this.gateSpacingZ;
+        this.ensureCourseSpacingLookup();
+        const anchorDist = this.evalCourseDistIntegral(this.anchorCourseSec);
+        const targetDist = anchorDist + (this.flightZ - worldZ);
+        if (targetDist <= 0) {
+            const s0 = Math.max(1e-3, this.getSpacingSpeedAtCourseSec(0, this.courseLookupWatts));
+            return targetDist / s0;
+        }
+        const cumDist = this.courseCumDistZ;
+        const maxSec = cumDist.length - 1;
+        if (targetDist >= cumDist[maxSec]) {
+            const sTail = Math.max(1e-3, this.getSpacingSpeedAtCourseSec(maxSec, this.courseLookupWatts));
+            return maxSec + (targetDist - cumDist[maxSec]) / sTail;
+        }
+        let lo = 0;
+        let hi = maxSec;
+        while (hi - lo > 1) {
+            const mid = (lo + hi) >> 1;
+            if (cumDist[mid] <= targetDist) lo = mid;
+            else hi = mid;
+        }
+        const span = Math.max(1e-6, cumDist[lo + 1] - cumDist[lo]);
+        return lo + (targetDist - cumDist[lo]) / span;
     }
 
     /**
-     * Cumulative 3D canyon floor elevation at `worldZ` (anchored to 0 at `worldZ = 0`).
+     * Cumulative 3D canyon floor elevation at `worldZ` (anchored smoothly at the dragon's current floor elevation).
      * Rises smoothly on uphill grades (+%) and drops on downhill grades (-%).
      */
     getCanyonFloorElevationAtZ(worldZ) {
+        this.ensureCourseSpacingLookup();
+        if (!this.hasNonZeroTerrainGrade) return 0.0;
         const secAtZ = this.worldZToWorkoutSec(worldZ);
-        const secAtOrigin = this.worldZToWorkoutSec(0);
-        return getCanyonWorldElevationAtSecond(secAtZ, this.gateSpacingZ)
-            - getCanyonWorldElevationAtSecond(secAtOrigin, this.gateSpacingZ);
+        return this.anchorFloorY + (this.evalCourseElevIntegral(secAtZ) - this.evalCourseElevIntegral(this.anchorCourseSec));
     }
 
     /**
@@ -2105,9 +2294,11 @@ class DragonSky3DEngine {
         }
 
         pt.shaftMat.color.setHex(tetherColor);
-        pt.shaftMat.opacity = gate.passed ? 0.16 : (hasSlope ? 0.44 : 0.26);
+        pt.baseShaftOpacity = gate.passed ? 0.16 : (hasSlope ? 0.44 : 0.26);
+        pt.shaftMat.opacity = pt.baseShaftOpacity;
         pt.baseRingMat.color.setHex(tetherColor);
-        pt.baseRingMat.opacity = gate.passed ? 0.22 : (hasSlope ? 0.62 : 0.38);
+        pt.baseRingOpacity = gate.passed ? 0.22 : (hasSlope ? 0.62 : 0.38);
+        pt.baseRingMat.opacity = pt.baseRingOpacity;
 
         if (spanY > 0.35) {
             pt.shaftMesh.visible = true;
@@ -2225,7 +2416,8 @@ class DragonSky3DEngine {
             const pulse = 0.5 + 0.5 * Math.sin(phase);
             entry.mesh.position.y = entry.baseY + Math.sin(phase) * (effR * 0.055) * dirSign;
             entry.mat.color.copy(this._windColBase).lerp(this._windColCrest, pulse * pulse);
-            entry.mat.opacity = (0.34 + 0.66 * pulse) * intensity;
+            entry.baseOpacity = (0.34 + 0.66 * pulse) * intensity;
+            entry.mat.opacity = entry.baseOpacity;
         });
 
         wv.verticalChevrons.forEach((entry) => {
@@ -2233,13 +2425,15 @@ class DragonSky3DEngine {
             const pulse = 0.5 + 0.5 * Math.sin(phase);
             entry.mesh.position.y = entry.baseY + Math.sin(phase) * (effR * 0.05) * dirSign;
             entry.mat.color.copy(this._windColBase).lerp(this._windColCrest, pulse * pulse);
-            entry.mat.opacity = (0.40 + 0.60 * pulse) * intensity;
+            entry.baseOpacity = (0.40 + 0.60 * pulse) * intensity;
+            entry.mat.opacity = entry.baseOpacity;
         });
 
         const haloPulse = 0.5 + 0.5 * Math.sin(this.windAnimTime * waveSpeed * 0.75 - gateOffset);
         wv.leftArc.mat.color.copy(this._windColBase).lerp(this._windColCrest, haloPulse * 0.45);
         wv.rightArc.mat.color.copy(wv.leftArc.mat.color);
         const arcOpacity = (0.42 + 0.28 * haloPulse) * intensity;
+        wv.baseArcOpacity = arcOpacity;
         wv.leftArc.mat.opacity = arcOpacity;
         wv.rightArc.mat.opacity = arcOpacity;
 
@@ -2251,7 +2445,8 @@ class DragonSky3DEngine {
                 ? camSideZ * ((gate.tubeRadius || 0.75) + 0.55)
                 : camSideZ * 0.25;
             wv.badgeSprite.position.set(0, wv.badgeBaseY, zOff);
-            wv.badgeMat.opacity = upcomingWindRank === 0 ? 0.96 : 0.82;
+            wv.baseBadgeOpacity = upcomingWindRank === 0 ? 0.96 : 0.82;
+            wv.badgeMat.opacity = wv.baseBadgeOpacity;
         }
     }
 
@@ -2546,7 +2741,9 @@ class DragonSky3DEngine {
             color: colorHex,
             emissive: colorHex,
             emissiveIntensity: 0.65,
-            shininess: 90
+            shininess: 90,
+            transparent: true,
+            opacity: 0.8
         });
         const scale = 0.28;
         const depth = 0.36;
@@ -2590,8 +2787,10 @@ class DragonSky3DEngine {
 
         const prevSec = Math.max(0, workoutSec - 1);
         const nextSec = workoutSec + 1;
-        const prevZ = worldZ + (workoutSec - prevSec) * this.gateSpacingZ;
-        const nextZ = worldZ - (nextSec - workoutSec) * this.gateSpacingZ;
+        const prevZ = prevSec === workoutSec
+            ? (worldZ + this.getSpacingSpeedAtCourseSec(workoutSec))
+            : this.workoutSecToWorldZ(prevSec);
+        const nextZ = this.workoutSecToWorldZ(nextSec);
         const prevWatts = getTargetWattsAtSecond(state.workout, prevSec, state.ftp);
         const nextWatts = getTargetWattsAtSecond(state.workout, nextSec, state.ftp);
         const prevY = this.getCanyonFloorElevationAtZ(prevZ) + wattsToSkyAltitudeY(prevWatts, state.ftp, getGradientPctAtSecond(prevSec));
@@ -2618,17 +2817,130 @@ class DragonSky3DEngine {
         return next ? next.targetWatts : null;
     }
 
+    /**
+     * Computes opacity multiplier in [0, 1] so gates begin fading slightly ahead of the avatar
+     * and fade smoothly throughout the zone between the avatar and the camera origin, reaching 0
+     * (completely invisible) at the camera origin.
+     */
+    computeGateCameraFade(gate) {
+        if (!gate || !this.camera) return 1;
+        const avatarZ = this.dragonGroup ? this.dragonGroup.position.z : this.flightZ;
+        const camZ = this.camera.position.z;
+        const gateZ = gate.worldZ;
+        if (!Number.isFinite(avatarZ) || !Number.isFinite(camZ) || !Number.isFinite(gateZ)) return 1;
+
+        if (Math.abs(gateZ - camZ) <= 1e-4) return 0;
+
+        const lookZ = this.cameraLastLook ? this.cameraLastLook[2] : avatarZ;
+        const lookDirZ = lookZ - camZ;
+        if (Math.abs(lookDirZ) > 1e-4 && (gateZ - camZ) * lookDirZ <= 0) {
+            return 0;
+        }
+
+        const spanZ = avatarZ - camZ;
+        if (Math.abs(spanZ) <= 1e-4) {
+            const camClear = Math.min(1, Math.abs(gateZ - camZ) / 6.0);
+            return camClear * camClear * camClear;
+        }
+
+        const absSpanZ = Math.abs(spanZ);
+        const earlyLeadZ = Math.max(8.0, Math.min(18.0, absSpanZ * 0.45));
+        const fadeStartSpanZ = spanZ + Math.sign(spanZ) * earlyLeadZ;
+        const u = (gateZ - camZ) / fadeStartSpanZ;
+        if (u >= 1) return 1;
+        if (u < 0) {
+            const camClear = Math.min(1, Math.abs(gateZ - camZ) / 6.0);
+            return camClear * camClear * camClear;
+        }
+
+        return u * u * u;
+    }
+
+    applyGateCameraFade(gate) {
+        if (!gate || !gate.group) return;
+        const defaultGateOpacity = 0.8;
+        const fade = this.computeGateCameraFade(gate);
+        gate.cameraFadeOpacity = fade;
+        gate.group.visible = fade > 0.001;
+
+        const isFading = fade < 0.999;
+
+        if (gate.torusMat) {
+            if (!gate.torusMat.transparent) {
+                gate.torusMat.transparent = true;
+                gate.torusMat.needsUpdate = true;
+            }
+            gate.torusMat.depthWrite = false;
+            gate.torusMat.opacity = defaultGateOpacity * fade;
+        }
+
+        if (gate.innerHaloMat) {
+            const baseHaloOpacity = (gate.cleared ? 0.95 : 0.6) * defaultGateOpacity;
+            gate.innerHaloMat.depthWrite = false;
+            gate.innerHaloMat.opacity = baseHaloOpacity * fade;
+        }
+
+        if (gate.wattText3D && gate.wattText3D.material) {
+            const wattMat = gate.wattText3D.material;
+            if (!wattMat.transparent) {
+                wattMat.transparent = true;
+                wattMat.needsUpdate = true;
+            }
+            wattMat.depthWrite = !isFading;
+            wattMat.opacity = defaultGateOpacity * fade;
+        }
+
+        if (gate.plumbTether) {
+            const pt = gate.plumbTether;
+            const baseShaft = typeof pt.baseShaftOpacity === 'number' ? pt.baseShaftOpacity : 0.26;
+            const baseRing = typeof pt.baseRingOpacity === 'number' ? pt.baseRingOpacity : 0.38;
+            pt.shaftMat.opacity = baseShaft * defaultGateOpacity * fade;
+            pt.baseRingMat.opacity = baseRing * defaultGateOpacity * fade;
+        }
+
+        if (gate.windVisual) {
+            const wv = gate.windVisual;
+            const baseArc = typeof wv.baseArcOpacity === 'number' ? wv.baseArcOpacity : 0.56;
+            wv.leftArc.mat.opacity = baseArc * defaultGateOpacity * fade;
+            wv.rightArc.mat.opacity = baseArc * defaultGateOpacity * fade;
+            wv.flankChevrons.forEach((entry) => {
+                const baseOp = typeof entry.baseOpacity === 'number' ? entry.baseOpacity : 0.75;
+                entry.mat.depthWrite = false;
+                entry.mat.opacity = baseOp * defaultGateOpacity * fade;
+            });
+            wv.verticalChevrons.forEach((entry) => {
+                const baseOp = typeof entry.baseOpacity === 'number' ? entry.baseOpacity : 0.75;
+                entry.mat.depthWrite = false;
+                entry.mat.opacity = baseOp * defaultGateOpacity * fade;
+            });
+            if (wv.badgeMat) {
+                const baseBadge = typeof wv.baseBadgeOpacity === 'number' ? wv.baseBadgeOpacity : 0.96;
+                wv.badgeMat.opacity = baseBadge * defaultGateOpacity * fade;
+            }
+        }
+    }
+
+    updateGatesCameraFade() {
+        for (let i = 0; i < this.gates.length; i++) {
+            this.applyGateCameraFade(this.gates[i]);
+        }
+    }
+
     syncGateToDesiredWatts(gate) {
         if (!gate) return;
+        const worldZ = this.workoutSecToWorldZ(gate.workoutSec);
+        const gateX = getSimulatedTurnOffsetX(worldZ);
         const baseWatts = getBaseTargetWattsAtSecond(state.workout, gate.workoutSec, state.ftp);
         const gradAtGate = getGradientPctAtSecond(gate.workoutSec);
         const targetWatts = getTargetWattsAtSecond(state.workout, gate.workoutSec, state.ftp);
-        const gateFloorY = this.getCanyonFloorElevationAtZ(gate.worldZ);
+        const gateFloorY = this.getCanyonFloorElevationAtZ(worldZ);
         const gateClearanceY = wattsToSkyAltitudeY(targetWatts, state.ftp, gradAtGate);
         const gateY = gateFloorY + gateClearanceY;
         const donutRadius = getDonutRadiusForTargetWatts(targetWatts, state.ftp, gradAtGate);
         const tubeRadius = Math.max(0.32, Math.min(0.95, donutRadius * 0.16));
 
+        gate.worldZ = worldZ;
+        gate.gateX = gateX;
         gate.baseWatts = baseWatts;
         gate.targetWatts = targetWatts;
         gate.floorY = gateFloorY;
@@ -2637,8 +2949,8 @@ class DragonSky3DEngine {
         gate.centerY = gateY;
         gate.donutRadius = donutRadius;
         gate.torusRadius = donutRadius;
-        gate.group.position.set(gate.gateX, gateY, gate.worldZ);
-        const pitchX = this.alignGateToFlightPath(gate.group, gate.worldZ, gate.workoutSec, gateY) || 0;
+        gate.group.position.set(gateX, gateY, worldZ);
+        const pitchX = this.alignGateToFlightPath(gate.group, worldZ, gate.workoutSec, gateY) || 0;
 
         if (gate.baseDonutRadius && gate.baseDonutRadius > 0) {
             const radiusScale = donutRadius / gate.baseDonutRadius;
@@ -2677,21 +2989,29 @@ class DragonSky3DEngine {
         this.syncGatePlumbTether(gate, donutRadius, tubeRadius, gateClearanceY, gradAtGate, pitchX, ringColor);
 
         if (gate.linkedObstacle && !gate.linkedObstacle.destroyed && !gate.linkedObstacle.hitTriggered) {
-            const obsFloorY = this.getCanyonFloorElevationAtZ(gate.linkedObstacle.worldZ);
+            const obs = gate.linkedObstacle;
+            if (typeof obs.courseSec === 'number') {
+                obs.worldZ = this.workoutSecToWorldZ(obs.courseSec);
+                obs.obsX = getSimulatedTurnOffsetX(obs.worldZ);
+            }
+            const obsFloorY = this.getCanyonFloorElevationAtZ(obs.worldZ);
             const obsY = obsFloorY + gateClearanceY;
-            gate.linkedObstacle.obsY = obsY;
-            gate.linkedObstacle.group.position.y = obsY;
+            obs.obsY = obsY;
+            obs.group.position.set(obs.obsX, obsY, obs.worldZ);
         }
+
+        this.applyGateCameraFade(gate);
     }
 
     /**
-     * Spawns a 3D Donut Gate (TorusGeometry) at `worldZ`.
+     * Spawns a 3D Donut Gate (TorusGeometry) at `workoutSec`'s speed-adjusted `worldZ`.
      * Its geometric center `(gateX, gateY, worldZ)` sits at the local 3D canyon floor elevation
      * plus the desired watt value's sky clearance (`wattsToSkyAltitudeY(targetWatts, state.ftp)`).
      */
     spawnDonutGate(worldZ, workoutSec) {
         if (!this.initialized) return;
         const resolvedWorkoutSec = Math.max(0, Math.round(workoutSec));
+        worldZ = this.workoutSecToWorldZ(resolvedWorkoutSec);
         const baseWatts = getBaseTargetWattsAtSecond(state.workout, resolvedWorkoutSec, state.ftp);
         const gradAtGate = getGradientPctAtSecond(resolvedWorkoutSec);
         const targetWatts = getTargetWattsAtSecond(state.workout, resolvedWorkoutSec, state.ftp);
@@ -2717,7 +3037,10 @@ class DragonSky3DEngine {
             color: ringColor,
             emissive: ringColor,
             emissiveIntensity: 0.5,
-            shininess: 95
+            shininess: 95,
+            transparent: true,
+            opacity: 0.8,
+            depthWrite: false
         });
         const torusMesh = new THREE.Mesh(torusGeo, torusMat);
         torusMesh.position.set(0, 0, 0);
@@ -2731,7 +3054,8 @@ class DragonSky3DEngine {
             color: 0xfef08a,
             side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.6
+            opacity: 0.48,
+            depthWrite: false
         });
         const innerHalo = new THREE.Mesh(innerHaloGeo, innerHaloMat);
         innerHalo.position.set(0, 0, 0);
@@ -2773,6 +3097,7 @@ class DragonSky3DEngine {
             baseDonutRadius: donutRadius,
             baseWatts,
             targetWatts,
+            cameraFadeOpacity: 1,
             passed: false,
             cleared: false,
             linkedObstacle: null
@@ -2782,13 +3107,15 @@ class DragonSky3DEngine {
         // Optionally spawn a destructible 3D obstacle between gates and evil dragon hunters on the riverbanks when enabled
         this.gateCounter += 1;
         if (state.renderObstacles && this.gateCounter % 2 === 0) {
-            const obsZ = worldZ + this.gateSpacingZ * 0.48;
+            const obsCourseSec = resolvedWorkoutSec - 0.48;
+            const obsZ = this.workoutSecToWorldZ(obsCourseSec);
             const obsY = this.getCanyonFloorElevationAtZ(obsZ) + gateClearanceY;
-            const obs = this.spawnObstacle(obsZ, obsY);
+            const obs = this.spawnObstacle(obsZ, obsY, obsCourseSec);
             gateObj.linkedObstacle = obs || null;
         }
         if (state.renderObstacles) {
-            this.spawnDragonHunterPair(worldZ + this.gateSpacingZ * 0.32);
+            const hunterBaseCourseSec = resolvedWorkoutSec - 0.32;
+            this.spawnDragonHunterPair(this.workoutSecToWorldZ(hunterBaseCourseSec), hunterBaseCourseSec);
         }
         this.syncGateToDesiredWatts(gateObj);
     }
@@ -2797,8 +3124,11 @@ class DragonSky3DEngine {
      * Spawns evil Dragon Hunters standing left and right from the river on the riverbanks.
      * When obstacles are enabled, they aim at the dragon and fire arrows pointed directly at the dragon.
      */
-    spawnDragonHunter(worldZ, sideSign) {
+    spawnDragonHunter(worldZ, sideSign, courseSec = null) {
         if (!this.initialized) return null;
+        if (typeof courseSec === 'number') {
+            worldZ = this.workoutSecToWorldZ(courseSec);
+        }
         const canyonCenterX = getSimulatedTurnOffsetX(worldZ);
         const bankOffset = sideSign * (11.0 + Math.random() * 4.5); // Left (< -8.5) and right (> +8.5) from the river
         const hunterX = canyonCenterX + bankOffset;
@@ -2853,6 +3183,7 @@ class DragonSky3DEngine {
             group: hunterGroup,
             bowPivot,
             worldZ,
+            courseSec,
             sideSign,
             bankOffset,
             hunterX,
@@ -2864,10 +3195,12 @@ class DragonSky3DEngine {
         return hunterObj;
     }
 
-    spawnDragonHunterPair(worldZ) {
+    spawnDragonHunterPair(worldZ, baseCourseSec = null) {
         if (!this.initialized || !state.renderObstacles) return;
-        this.spawnDragonHunter(worldZ, -1); // Left of the river
-        this.spawnDragonHunter(worldZ - 14.0, 1); // Right of the river
+        const rightCourseSec = typeof baseCourseSec === 'number' ? (baseCourseSec + 0.21) : null;
+        const rightZ = rightCourseSec !== null ? this.workoutSecToWorldZ(rightCourseSec) : (worldZ - 14.0);
+        this.spawnDragonHunter(worldZ, -1, baseCourseSec); // Left of the river
+        this.spawnDragonHunter(rightZ, 1, rightCourseSec); // Right of the river
     }
 
     /**
@@ -2962,8 +3295,11 @@ class DragonSky3DEngine {
      * User must press SPACEBAR at the right moment to blast it with dragon fire,
      * or colliding with it decreases collected points!
      */
-    spawnObstacle(worldZ, referenceY) {
+    spawnObstacle(worldZ, referenceY, courseSec = null) {
         if (!this.initialized) return;
+        if (typeof courseSec === 'number') {
+            worldZ = this.workoutSecToWorldZ(courseSec);
+        }
         const obsX = getSimulatedTurnOffsetX(worldZ);
         const obsY = referenceY;
 
@@ -3000,6 +3336,7 @@ class DragonSky3DEngine {
             warnRing,
             warnRingMat,
             worldZ,
+            courseSec,
             obsX,
             obsY,
             destroyed: false,
@@ -3029,11 +3366,17 @@ class DragonSky3DEngine {
         this.dragonHunters = [];
         this.hunterArrows = [];
         this.flightZ = 0;
-        this.nextGateZ = -this.firstGateLeadZ;
         this.baseElapsedSec = state.elapsedSec;
         this.lastSyncedElapsedSec = state.elapsedSec;
         this.subSec = 0;
+        this.anchorCourseSec = state.elapsedSec - this.firstGateLeadTimeSec;
+        this.anchorFloorY = 0;
+        this.activeSpacingWatts = this.getInitialActiveSpacingWatts();
+        this.ensureCourseSpacingLookup(true);
+        this.gateSpacingZ = this.getSpacingSpeedAtCourseSec(this.anchorCourseSec, this.activeSpacingWatts);
+        this.currentForwardSpeed = 0;
         this.nextGateWorkoutSec = state.elapsedSec;
+        this.nextGateZ = this.workoutSecToWorldZ(this.nextGateWorkoutSec);
         this.gateCounter = 0;
         this.lastClearedGateWorkoutSec = null;
         this.lastClearedGateAltitudeRatio = 0;
@@ -3114,36 +3457,27 @@ class DragonSky3DEngine {
             b.group.position.y = this.getCanyonFloorElevationAtZ(zPos) + b.yBase;
         });
 
-        for (let i = 0; i < 8; i++) {
-            this.spawnDonutGate(this.nextGateZ, this.nextGateWorkoutSec);
-            this.nextGateZ -= this.gateSpacingZ;
+        while (
+            (this.gates.length < 8 || this.workoutSecToWorldZ(this.nextGateWorkoutSec) > this.flightZ - 520) &&
+            this.gates.length < 30
+        ) {
+            const gateZ = this.workoutSecToWorldZ(this.nextGateWorkoutSec);
+            this.spawnDonutGate(gateZ, this.nextGateWorkoutSec);
             this.nextGateWorkoutSec += 1;
         }
+        this.nextGateZ = this.workoutSecToWorldZ(this.nextGateWorkoutSec);
+        if (this.hasNonZeroTerrainGrade) {
+            this.syncSceneryHeightsForCourseChange();
+        }
+        this.lastTerrainSyncWatts = this.activeSpacingWatts;
     }
 
     /**
-     * Immediately reshapes the 3D canyon ground, river, trees, bushes, stones, clouds, birds, hunters,
-     * gates, avatar, ghost, and camera when the terrain gradient profile is changed or re-rolled.
+     * Re-evaluates ground, river, vegetation, rock, hunter, cloud, and bird heights when the 3D elevation
+     * profile changes (either on terrain profile re-roll or significant active-watt spacing shifts on hills).
      */
-    refreshCanyonElevationProfile() {
+    syncSceneryHeightsForCourseChange() {
         if (!this.initialized) return;
-        const prevFloorY = typeof this.lastDragonFloorY === 'number' ? this.lastDragonFloorY : 0;
-        const nextFloorY = this.getCanyonFloorElevationAtZ(this.flightZ);
-        const deltaFloorY = nextFloorY - prevFloorY;
-
-        this.lastDragonFloorY = nextFloorY;
-        this.dragonCurrentY += deltaFloorY;
-        this.dragonClearanceY = Math.max(GROUND_NEAR_TOUCH_ALTITUDE_Y, this.dragonCurrentY - nextFloorY);
-        if (typeof this.cameraCurrentY === 'number' && !isNaN(this.cameraCurrentY)) {
-            this.cameraCurrentY += deltaFloorY;
-        }
-        if (typeof this.cameraLookTargetY === 'number' && !isNaN(this.cameraLookTargetY)) {
-            this.cameraLookTargetY += deltaFloorY;
-        }
-        if (this.dragonGroup) {
-            this.dragonGroup.position.y = this.dragonCurrentY;
-        }
-
         this.updateCanyonAndRiverWorldGeometry(this.flightZ, true);
 
         this.trees.forEach((t) => {
@@ -3177,10 +3511,14 @@ class DragonSky3DEngine {
             s.mesh.position.y = groundY - 0.18 * s.scaleY;
         });
         this.dragonHunters.forEach((h) => {
+            if (typeof h.courseSec === 'number') {
+                h.worldZ = this.workoutSecToWorldZ(h.courseSec);
+                h.hunterX = getSimulatedTurnOffsetX(h.worldZ) + h.bankOffset;
+            }
             const canyonFloorY = this.getCanyonFloorElevationAtZ(h.worldZ);
             const groundY = Math.max(canyonFloorY + 0.2, this.getRenderedGroundHeightAt(h.bankOffset, h.worldZ));
             h.groundY = groundY;
-            h.group.position.y = groundY;
+            h.group.position.set(h.hunterX, groundY, h.worldZ);
         });
         this.clouds.forEach((c) => {
             const zPos = c.mesh.position.z;
@@ -3190,8 +3528,40 @@ class DragonSky3DEngine {
             const zPos = b.group.position.z;
             b.group.position.y = this.getCanyonFloorElevationAtZ(zPos) + b.yBase;
         });
+    }
+
+    /**
+     * Immediately reshapes the 3D canyon ground, river, trees, bushes, stones, clouds, birds, hunters,
+     * gates, avatar, ghost, and camera when the terrain gradient profile is changed or re-rolled.
+     */
+    refreshCanyonElevationProfile() {
+        if (!this.initialized) return;
+        const prevFloorY = typeof this.lastDragonFloorY === 'number' ? this.lastDragonFloorY : 0;
+        this.ensureCourseSpacingLookup(true);
+        const startCourseSec = (this.baseElapsedSec || 0) - this.firstGateLeadTimeSec;
+        this.anchorFloorY = this.evalCourseElevIntegral(this.anchorCourseSec) - this.evalCourseElevIntegral(startCourseSec);
+        this.gateSpacingZ = this.getSpacingSpeedAtCourseSec(this.anchorCourseSec, this.activeSpacingWatts);
+        const nextFloorY = this.getCanyonFloorElevationAtZ(this.flightZ);
+        const deltaFloorY = nextFloorY - prevFloorY;
+
+        this.lastDragonFloorY = nextFloorY;
+        this.dragonCurrentY += deltaFloorY;
+        this.dragonClearanceY = Math.max(GROUND_NEAR_TOUCH_ALTITUDE_Y, this.dragonCurrentY - nextFloorY);
+        if (typeof this.cameraCurrentY === 'number' && !isNaN(this.cameraCurrentY)) {
+            this.cameraCurrentY += deltaFloorY;
+        }
+        if (typeof this.cameraLookTargetY === 'number' && !isNaN(this.cameraLookTargetY)) {
+            this.cameraLookTargetY += deltaFloorY;
+        }
+        if (this.dragonGroup) {
+            this.dragonGroup.position.y = this.dragonCurrentY;
+        }
+
+        this.syncSceneryHeightsForCourseChange();
+        this.lastTerrainSyncWatts = this.activeSpacingWatts;
 
         this.gates.forEach((g) => this.syncGateToDesiredWatts(g));
+        this.nextGateZ = this.workoutSecToWorldZ(this.nextGateWorkoutSec);
         this.updateGhost(0);
     }
 
@@ -3237,7 +3607,10 @@ class DragonSky3DEngine {
             return { canFire: false, nextObs: null, secondsUntilReach: Infinity, pointCost: FIREBALL_POINT_COST };
         }
         const distZ = this.flightZ - nextObs.worldZ;
-        const currentForwardSpeed = Math.max(58.0, (state.speedKmh || 34) * 2.35);
+        const currentForwardSpeed = Math.max(
+            MIN_ACTIVE_GATE_SPACING_Z,
+            this.currentForwardSpeed || this.gateSpacingZ || DEFAULT_GATE_SPACING_Z
+        );
         const secondsUntilReach = distZ / currentForwardSpeed;
         const canFire = distZ >= -2.5 && secondsUntilReach <= FIRE_WINDOW_SECONDS;
         return {
@@ -3407,14 +3780,68 @@ class DragonSky3DEngine {
             ? targetWatts
             : currentPedaledWatts;
 
-        // Stop forward motion when the user is not generating any watts (or when paused / not started)
+        // Stop forward motion when the user is not generating any watts (or when paused / not started),
+        // while preserving the active gate spacing so gates never collapse together at 0 W.
+        const clampedDt = Math.min(0.05, Math.max(0.001, dt));
+        if (isMovingForward) {
+            if (this.activeSpacingWatts <= 0) {
+                this.activeSpacingWatts = currentPedaledWatts;
+            } else {
+                const wattEase = Math.min(1, clampedDt * 6.5);
+                this.activeSpacingWatts += (currentPedaledWatts - this.activeSpacingWatts) * wattEase;
+                if (Math.abs(currentPedaledWatts - this.activeSpacingWatts) < 0.25) {
+                    this.activeSpacingWatts = currentPedaledWatts;
+                }
+            }
+        } else if (!isFlying && currentPedaledWatts > 0) {
+            this.activeSpacingWatts = currentPedaledWatts;
+        }
+        this.ensureCourseSpacingLookup();
+
         const prevFlightZ = this.flightZ;
         const prevCourseX = getSimulatedTurnOffsetX(prevFlightZ);
-        const forwardSpeed = isMovingForward ? this.gateSpacingZ : 0.0;
         if (isMovingForward) {
             this.subSec = Math.min(0.999, this.subSec + dt);
-            const elapsedSinceSeed = Math.max(0, (state.elapsedSec - this.baseElapsedSec) + this.subSec);
-            this.flightZ = -elapsedSinceSeed * this.gateSpacingZ;
+            const nextCourseSec = Math.max(
+                this.anchorCourseSec,
+                state.elapsedSec + this.subSec - this.firstGateLeadTimeSec
+            );
+            const deltaDistZ = this.evalCourseDistIntegral(nextCourseSec) - this.evalCourseDistIntegral(this.anchorCourseSec);
+            const deltaElevY = this.evalCourseElevIntegral(nextCourseSec) - this.evalCourseElevIntegral(this.anchorCourseSec);
+            this.flightZ -= deltaDistZ;
+            this.anchorFloorY += deltaElevY;
+            this.anchorCourseSec = nextCourseSec;
+        }
+        const localSpacingZ = this.getSpacingSpeedAtCourseSec(this.anchorCourseSec, this.activeSpacingWatts);
+        this.gateSpacingZ = localSpacingZ;
+        const forwardSpeed = isMovingForward ? localSpacingZ : 0.0;
+        this.currentForwardSpeed = forwardSpeed;
+
+        // Continuously reflect uphill slowdown / downhill speedup on the live speed telemetry between 1Hz ticks
+        if (isMovingForward && typeof syncLiveFlightSpeed === 'function') {
+            const liveGradePct = getSmoothGradientPctAtSecond(Math.max(0, this.anchorCourseSec));
+            const liveKmh = syncLiveFlightSpeed(liveGradePct);
+            if (Math.abs(liveKmh - this.lastHudSyncedSpeedKmh) >= 0.1) {
+                this.lastHudSyncedSpeedKmh = liveKmh;
+                const speedEl = document.getElementById('speedDisplay');
+                if (speedEl) speedEl.textContent = liveKmh.toFixed(1);
+            }
+        } else if (!isMovingForward && !isPedalingWatts && isFlying && state.speedKmh !== 0) {
+            state.speedKmh = 0;
+            this.lastHudSyncedSpeedKmh = 0;
+            const speedEl = document.getElementById('speedDisplay');
+            if (speedEl) speedEl.textContent = '0.0';
+        }
+
+        const targetRefW = currentPedaledWatts > 0 ? currentPedaledWatts : this.activeSpacingWatts;
+        if (
+            this.hasNonZeroTerrainGrade &&
+            (Math.abs(this.activeSpacingWatts - this.lastTerrainSyncWatts) >= 3.5 ||
+                (Math.abs(this.activeSpacingWatts - this.lastTerrainSyncWatts) > 0.05 &&
+                    Math.abs(targetRefW - this.activeSpacingWatts) < 0.3))
+        ) {
+            this.syncSceneryHeightsForCourseChange();
+            this.lastTerrainSyncWatts = this.activeSpacingWatts;
         }
 
         // Flight-simulator heading & 3D position integration:
@@ -3593,7 +4020,7 @@ class DragonSky3DEngine {
         this.lastDragonFloorY = currentCanyonFloorY;
         const localSlopeRatio = this.getCanyonSlopeRatioAtZ(this.flightZ);
         const terrainSlopePitch = Math.atan(localSlopeRatio);
-        const clearancePitch = Math.atan2(this.dragonVelocityY, this.gateSpacingZ) * 1.15;
+        const clearancePitch = Math.atan2(this.dragonVelocityY, Math.max(MIN_ACTIVE_GATE_SPACING_Z, this.gateSpacingZ)) * 1.15;
         const desiredSlopeAndClimbPitch = Math.max(
             -0.58,
             Math.min(0.58, terrainSlopePitch * 0.92 + (isMovingForward ? clearancePitch : this.dragonVelocityY * 0.018))
@@ -3909,12 +4336,21 @@ class DragonSky3DEngine {
         // Advance 3D gate slope chevron & halo wave phase (Climb >= +0.35%, Descent <= -0.35%)
         this.windAnimTime += dt * (isMovingForward ? 1.0 : 0.5);
 
-        // Spawn new Donut Gates ahead & evaluate passing through gates
-        while (this.nextGateZ > this.flightZ - 480) {
-            this.spawnDonutGate(this.nextGateZ, this.nextGateWorkoutSec);
-            this.nextGateZ -= this.gateSpacingZ;
-            this.nextGateWorkoutSec += 1;
+        // Spawn new Donut Gates ahead (scaled dynamically to current speed) & evaluate passing through gates
+        let upcomingUnpassedCount = 0;
+        for (let i = 0; i < this.gates.length; i++) {
+            if (!this.gates[i].passed) upcomingUnpassedCount += 1;
         }
+        while (
+            (upcomingUnpassedCount < 8 || this.workoutSecToWorldZ(this.nextGateWorkoutSec) > this.flightZ - 520) &&
+            upcomingUnpassedCount < 30
+        ) {
+            const gateZ = this.workoutSecToWorldZ(this.nextGateWorkoutSec);
+            this.spawnDonutGate(gateZ, this.nextGateWorkoutSec);
+            this.nextGateWorkoutSec += 1;
+            upcomingUnpassedCount += 1;
+        }
+        this.nextGateZ = this.workoutSecToWorldZ(this.nextGateWorkoutSec);
 
         for (let i = this.gates.length - 1; i >= 0; i--) {
             const g = this.gates[i];
@@ -3953,7 +4389,11 @@ class DragonSky3DEngine {
                 }
             }
 
-            if (g.worldZ > this.flightZ + 30) {
+            const gateCleanupZ = Math.max(
+                this.flightZ + 30,
+                (this.camera ? this.camera.position.z : this.flightZ) + 8
+            );
+            if (g.worldZ > gateCleanupZ) {
                 this.disposeGateWindVisual(g);
                 this.scene.remove(g.group);
                 this.gates.splice(i, 1);
@@ -3978,6 +4418,8 @@ class DragonSky3DEngine {
             this.animateGateWindVisual(g, windRank);
         }
 
+        this.updateGatesCameraFade();
+
         // Update Obstacles, Spacebar warning reticle & collision checks
         let obstacleInStrikeZone = false;
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
@@ -3999,7 +4441,10 @@ class DragonSky3DEngine {
             }
 
             const distAhead = this.flightZ - obs.worldZ;
-            const secUntilObs = distAhead / Math.max(58.0, forwardSpeed || 68.0);
+            const secUntilObs = distAhead / Math.max(
+                MIN_ACTIVE_GATE_SPACING_Z,
+                forwardSpeed || this.gateSpacingZ || DEFAULT_GATE_SPACING_Z
+            );
             if (distAhead >= 0 && secUntilObs <= 3.0) {
                 obstacleInStrikeZone = true;
                 obs.warnRingMat.color.setHex(0xef4444);
@@ -4029,6 +4474,16 @@ class DragonSky3DEngine {
                 this.scene.remove(hunter.group);
                 this.dragonHunters.splice(i, 1);
                 continue;
+            }
+            if (typeof hunter.courseSec === 'number') {
+                const syncedZ = this.workoutSecToWorldZ(hunter.courseSec);
+                if (Math.abs(syncedZ - hunter.worldZ) > 0.02) {
+                    hunter.worldZ = syncedZ;
+                    hunter.hunterX = getSimulatedTurnOffsetX(syncedZ) + hunter.bankOffset;
+                    const canyonFloorY = this.getCanyonFloorElevationAtZ(syncedZ);
+                    hunter.groundY = Math.max(canyonFloorY + 0.2, this.getRenderedGroundHeightAt(hunter.bankOffset, syncedZ));
+                    hunter.group.position.set(hunter.hunterX, hunter.groundY, syncedZ);
+                }
             }
             // Turn hunter to face the dragon
             if (this.dragonGroup) {

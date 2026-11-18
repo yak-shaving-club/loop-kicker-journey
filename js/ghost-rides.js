@@ -204,6 +204,7 @@ function toggleSimMode(forceState) {
         }
         document.getElementById('simWattSlider').value = state.actualWatts;
         document.getElementById('simWattReadout').textContent = `${state.actualWatts} W`;
+        syncLiveFlightSpeed();
     } else {
         bar.classList.add('hidden');
         text.textContent = 'Sim Mode: OFF';
@@ -211,7 +212,9 @@ function toggleSimMode(forceState) {
         if (!bleTrainer.connected && !bleRower.connected) {
             state.actualWatts = 0;
             if (!bleCadenceSensor.connected) state.cadence = 0;
-            if (!bleSpeedSensor.connected) state.speedKmh = 0;
+            state.speedKmh = 0;
+        } else {
+            syncLiveFlightSpeed();
         }
     }
     updateHeaderAndSetupVisibility();
