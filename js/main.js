@@ -546,7 +546,7 @@ function regenerateSessionWindProfile() {
         document.getElementById('simWattReadout').textContent = `${targetW} W`;
     }
     if (dragon3D) {
-        dragon3D.gates.forEach(g => dragon3D.syncGateToDesiredWatts(g));
+        dragon3D.refreshCanyonElevationProfile();
     }
     if (bleTrainer.connected) {
         if (state.resistanceMode === 'erg') {
@@ -865,7 +865,7 @@ function drawBottomTimelineOverlayOnScreenshot(ctx, width, height, pxRatio) {
             legendW += dotSize + Math.round(4 * s) + Math.ceil(ctx.measureText(z.label).width) + itemGap;
         });
         ctx.font = `700 ${Math.round(10 * s)}px sans-serif`;
-        const windText = 'Downwind/Upwind';
+        const windText = 'Canyon Elevation';
         const wattsText = 'Dragon Watts';
         const windW = lineSampleW + Math.round(4 * s) + Math.ceil(ctx.measureText(windText).width);
         const dragonW = lineSampleW + Math.round(4 * s) + Math.ceil(ctx.measureText(wattsText).width);

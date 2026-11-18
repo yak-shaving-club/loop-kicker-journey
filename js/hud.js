@@ -16,7 +16,7 @@ function updateLiveHud() {
     const inZone = state.actualWatts > 0 && errorWatts <= tolW;
     const isBullseye = state.actualWatts > 0 && errorWatts <= Math.max(2, tolW * 0.25);
 
-    // Slope physics & timeline updates (UPWIND THERMAL / DOWNWIND DRAFT • Pedal More Watts to Gain Height)
+    // Canyon terrain slope physics & timeline updates
     const gradSign = state.currentGradientPct > 0 ? '+' : '';
     const targetGradSign = state.targetGradientPct > 0 ? '+' : '';
     const formattedSlope = `${gradSign}${state.currentGradientPct.toFixed(1)}%`;
@@ -31,9 +31,9 @@ function updateLiveHud() {
 
     const modeLabels = {
         easy: 'Easy (0% Flat)',
-        medium: 'Medium (Downwind / Upwind)',
-        realistic: 'Medium (Downwind / Upwind)',
-        difficult: 'Difficult (Strong Downwind / Upwind)',
+        medium: 'Medium (Rolling Hills)',
+        realistic: 'Medium (Rolling Hills)',
+        difficult: 'Difficult (Steep Canyon)',
         erg: 'ERG Lock'
     };
     const shortModeLabels = {
@@ -442,7 +442,10 @@ function executeWorkoutTick() {
     const tolW = getAccuracyToleranceWatts();
     const gateY = wattsToSkyAltitudeY(targetWatts, state.ftp, state.currentGradientPct);
     const donutRadius = getDonutRadiusForTargetWatts(targetWatts, state.ftp, state.currentGradientPct, tolW);
-    const dragonAltitudeDiff = dragon3D ? Math.abs(dragon3D.dragonCurrentY - gateY) : Infinity;
+    const dragonClearanceY = dragon3D
+        ? (typeof dragon3D.dragonClearanceY === 'number' ? dragon3D.dragonClearanceY : dragon3D.dragonCurrentY)
+        : Infinity;
+    const dragonAltitudeDiff = Math.abs(dragonClearanceY - gateY);
     const dragonHorizontalDiff = state.steeringEnabled
         ? (dragon3D ? Math.abs(dragon3D.dragonSteerOffsetX) : Math.abs(state.dragonSteerOffsetX || 0))
         : 0;

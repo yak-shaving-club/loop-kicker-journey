@@ -654,8 +654,24 @@ function renderWorkoutTimelinePlot(ctx, originX, originY, w, h, scale = 1) {
     if (state.gradientProfile && state.gradientProfile.length > 0) {
         const step = Math.max(1, Math.floor(totalSec / 450));
         const lastEntry = state.gradientProfile[state.gradientProfile.length - 1];
+        const plotBottomY = originY + padTop + plotH;
 
         ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(secToX(0), plotBottomY);
+        for (let s = 0; s <= totalSec; s += step) {
+            const gEntry = state.gradientProfile[Math.min(state.gradientProfile.length - 1, s)];
+            ctx.lineTo(secToX(s), elevationToY(gEntry.elevationMeters));
+        }
+        ctx.lineTo(secToX(totalSec), elevationToY(lastEntry.elevationMeters));
+        ctx.lineTo(secToX(totalSec), plotBottomY);
+        ctx.closePath();
+        const elevFillGrad = ctx.createLinearGradient(0, originY + padTop, 0, plotBottomY);
+        elevFillGrad.addColorStop(0.0, 'rgba(250, 204, 21, 0.24)');
+        elevFillGrad.addColorStop(1.0, 'rgba(250, 204, 21, 0.02)');
+        ctx.fillStyle = elevFillGrad;
+        ctx.fill();
+
         ctx.lineWidth = 2.4 * scale;
         ctx.strokeStyle = '#facc15';
         ctx.beginPath();
@@ -694,9 +710,17 @@ function renderWorkoutTimelinePlot(ctx, originX, originY, w, h, scale = 1) {
 
     if (state.gradientProfile && state.gradientProfile.length > 0) {
         const curIdx = Math.max(0, Math.min(state.gradientProfile.length - 1, Math.floor(state.elapsedSec)));
+        const prevIdx = Math.max(0, curIdx - 1);
+        const nextIdx = Math.min(state.gradientProfile.length - 1, curIdx + 1);
         const dragonX = secToX(curIdx);
         const dragonY = elevationToY(state.gradientProfile[curIdx].elevationMeters);
-        drawTerrainDragonIcon(ctx, dragonX, dragonY, 0, scale);
+        let slopeAngle = 0;
+        if (maxElev - minElev >= 0.5 && nextIdx > prevIdx) {
+            const dx = secToX(nextIdx) - secToX(prevIdx);
+            const dy = elevationToY(state.gradientProfile[nextIdx].elevationMeters) - elevationToY(state.gradientProfile[prevIdx].elevationMeters);
+            slopeAngle = Math.max(-0.45, Math.min(0.45, Math.atan2(dy, Math.max(1, dx))));
+        }
+        drawTerrainDragonIcon(ctx, dragonX, dragonY, slopeAngle, scale);
     }
 
     ctx.fillStyle = '#94a3b8';

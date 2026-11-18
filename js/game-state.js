@@ -84,15 +84,20 @@ const state = {
     ghost: null
 };
 
+// Visual 3D canyon grade multiplier (amplifies wide-FOV 3D terrain steepness while keeping trainer grade & meters exact)
+const CANYON_SLOPE_VISUAL_SCALE = 5.2;
+
 function generateTerrainGradientProfile(totalDurationSec, mode) {
     const total = Math.max(1, Math.ceil(totalDurationSec));
     const profile = [];
     let current = 0.0;
+    let prevCurrent = 0.0;
     let target = 0.0;
-    let elevationMeters = 0.0;
+    let slopeIntegral = 0.0;
     let ticksRemaining = 0;
 
     for (let s = 0; s <= total; s++) {
+        prevCurrent = current;
         if (mode === 'easy' || mode === 'erg') {
             current = 0.0;
             target = 0.0;
@@ -127,11 +132,71 @@ function generateTerrainGradientProfile(totalDurationSec, mode) {
             }
         }
         if (s > 0) {
-            elevationMeters += 8.5 * (current / 100.0);
+            slopeIntegral += 0.5 * (prevCurrent + current) / 100.0;
         }
-        profile.push({ current, target, elevationMeters: +elevationMeters.toFixed(2) });
+        const elevationMeters = +(slopeIntegral * 8.5).toFixed(2);
+        profile.push({ current, target, elevationMeters, slopeIntegral });
     }
     return profile;
+}
+
+/**
+ * Continuously interpolated terrain gradient (%) at fractional workout second `sec`.
+ * Smoothly tapers to 0% past the end of the workout so downstream terrain levels off naturally.
+ */
+function getSmoothGradientPctAtSecond(sec) {
+    const profile = state.gradientProfile;
+    if (!profile || profile.length === 0) {
+        return state.currentGradientPct || 0.0;
+    }
+    const lastIdx = profile.length - 1;
+    if (!Number.isFinite(sec)) return 0.0;
+    if (sec <= 0) return profile[0].current || 0.0;
+    if (sec >= lastIdx) {
+        const gLast = profile[lastIdx].current || 0.0;
+        const taper = Math.max(0.0, 1.0 - (sec - lastIdx) / 4.0);
+        return gLast * taper;
+    }
+    const idx = Math.floor(sec);
+    const frac = sec - idx;
+    const g0 = profile[idx].current || 0.0;
+    const g1 = profile[Math.min(lastIdx, idx + 1)].current || 0.0;
+    return g0 + (g1 - g0) * frac;
+}
+
+/**
+ * Exact O(1), C1-smooth cumulative 3D canyon floor elevation (in Three.js world Y units)
+ * at fractional workout second `sec`, integrated from the piecewise-linear gradient profile.
+ */
+function getCanyonWorldElevationAtSecond(sec, gateSpacingZ = 68) {
+    const profile = state.gradientProfile;
+    if (!profile || profile.length === 0 || !Number.isFinite(sec)) {
+        return 0.0;
+    }
+    const lastIdx = profile.length - 1;
+    const readIntegral = (entry) => (
+        typeof entry.slopeIntegral === 'number'
+            ? entry.slopeIntegral
+            : ((entry.elevationMeters || 0.0) / 8.5)
+    );
+
+    let integralAtSec = 0.0;
+    if (sec <= 0) {
+        const g0 = profile[0].current || 0.0;
+        integralAtSec = (g0 * 0.01) * sec;
+    } else if (sec >= lastIdx) {
+        const gLast = profile[lastIdx].current || 0.0;
+        const dtAfter = Math.min(4.0, sec - lastIdx);
+        integralAtSec = readIntegral(profile[lastIdx]) + gLast * (dtAfter - (dtAfter * dtAfter) / 8.0) * 0.01;
+    } else {
+        const idx = Math.floor(sec);
+        const u = sec - idx;
+        const g0 = profile[idx].current || 0.0;
+        const g1 = profile[Math.min(lastIdx, idx + 1)].current || 0.0;
+        integralAtSec = readIntegral(profile[idx]) + (g0 * u + 0.5 * (g1 - g0) * u * u) * 0.01;
+    }
+
+    return integralAtSec * gateSpacingZ * CANYON_SLOPE_VISUAL_SCALE;
 }
 
 function syncGradientAtSecond(sec) {

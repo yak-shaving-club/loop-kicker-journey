@@ -1,6 +1,7 @@
 ---
 name: update-readme
 description: Regenerate the 12 Loop Kicker Journey application screenshots in docs/screenshots/ at 1730x1860 resolution and update README.md. ONLY invoke this skill when the user explicitly asks to run update-readme, regenerate screenshots, or update README.md—never run it automatically after code or UI changes.
+model: Gemini 4 Hydrogen (copilot)
 ---
 
 # Update README & Screenshots Skill (`update-readme`)

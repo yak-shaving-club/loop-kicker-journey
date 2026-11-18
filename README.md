@@ -18,7 +18,7 @@ No server or package installation is required. The page loads Three.js and Tailw
 3. Step through the setup screens and take off:
    - **Splashscreen:** Click **Start Setup** from the dragon hero screen.
    - **1 · Pairing & Rules:** Pair Bluetooth devices (or enable the Virtual Trainer Simulator and **Auto-Fly Target Gate**), toggle steering and 3D obstacles, and set **Donut Gate Accuracy** (`40 W` by default).
-   - **2 · Training Selection:** Filter the 26 built-in presets by duration (`≤15m`, `16–30m`, `30m+`) and intensity (`Endurance`, `Sweet Spot`, `Threshold`, `VO2max / HIIT`, `FTP Test`), upload a Zwift `.zwo` file, or load a saved `.loop-kicker-journey-ghost.json` ghost ride, then set your FTP, preview expected **Avg** watts / **IF** / **TSS**, and choose a resistance/wind mode.
+   - **2 · Training Selection:** Filter the 26 built-in presets by duration (`≤15m`, `16–30m`, `30m+`) and intensity (`Endurance`, `Sweet Spot`, `Threshold`, `VO2max / HIIT`, `FTP Test`), upload a Zwift `.zwo` file, or load a saved `.loop-kicker-journey-ghost.json` ghost ride, then set your FTP, preview expected **Avg** watts / **IF** / **TSS**, and choose a resistance/slope mode.
    - **3 · Avatar Selection:** Choose your 3D avatar and camera view over a live sky preview, then click **Start Flight**.
    - **4 · Flight & Summary:** Fly through the target-watt donut gates and finish to view the **Workout Summary** screen (`.fit`, `.loop-kicker-journey-ghost.json`, and `.png` export).
 
@@ -38,7 +38,7 @@ Available workouts can be filtered by duration and physiological intensity:
 - **FTP Ramp Tests:** **Standard MAP / FTP Ramp Test** (`+20 W/min` up to `580 W`) and **Lite / Finer-Step FTP Ramp Test (+10W)** (`+10 W/min` up to `560 W`) — progressive 1-minute fixed-watt ramps ridden to exhaustion, estimating FTP values past `400 W` regardless of your prior FTP setting. An active FTP Test badge is shown in the HUD, and stopping pedaling for 5 seconds automatically finishes the flight, displays your calculated FTP (`75%` of best 1-minute average power) prominently in the summary, and saves it to `localStorage` as your default FTP for future trainings.
 - **Custom Zwift workouts** in `.zwo` format
 
-Resistance modes are **Easy**, **Medium**, **Difficult**, and **ERG Lock** (with a button to re-roll the session's random wind profile). In **Medium** and **Difficult** modes, simulated upwind thermals and downwind drafts are shown directly on upcoming donut gates with animated emerald lift or amber draft 3D chevrons, flanking wind halos, and slope badges. During a flight, **Pause Flight** / **Resume Flight** pauses or resumes the workout, and **Finish & Summary** ends a workout early.
+Resistance modes are **Easy** (`0%` flat), **Medium** (*Rolling Hills*), **Difficult** (*Steep Canyon*), and **ERG Lock** (with a button to re-roll the session's random 3D canyon slope profile). In **Medium** and **Difficult** modes, the 3D canyon floor, river, forest, and flight path physically climb and descend along the terrain elevation profile while upcoming donut gates display animated amber **CLIMB** (`+grade`) or emerald **DESCENT** (`-grade`) 3D slope chevrons, flanking halos, and grade badges. During a flight, **Pause Flight** / **Resume Flight** pauses or resumes the workout, and **Finish & Summary** ends a workout early.
 
 ### Adaptive music
 

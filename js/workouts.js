@@ -762,8 +762,8 @@ function getBaseTargetWattsAtSecond(workout, sec, ftp) {
 }
 
 /**
- * Upwinds / Downwinds only affect the physical resistance (simulation grade / incline) sent to the
- * Wahoo KICKR and the 3D gate wind indicators; they do not modify the target watt values.
+ * Canyon terrain slope only affects the physical resistance (simulation grade / incline) sent to the
+ * smart trainer and the 3D canyon elevation / gate slope indicators; it does not modify target watts.
  */
 function getWindWattMultiplier(gradientPct) {
     return 1.0;
