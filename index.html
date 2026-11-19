@@ -999,7 +999,7 @@
                             <g transform="rotate(-8) translate(0, -125)">
                                 <rect x="-58" y="-16" width="116" height="28" rx="10" fill="#020617" fill-opacity="0.88" stroke="#4ade80" stroke-width="1.8"/>
                                 <rect x="-54" y="-13" width="108" height="22" rx="7" fill="none" stroke="#fef08a" stroke-width="0.6" opacity="0.38"/>
-                                <text x="0" y="3" font-family="monospace" font-weight="900" font-size="14.5" fill="#fde047" text-anchor="middle" letter-spacing="0.5">200W ±40W</text>
+                                <text x="0" y="3" font-family="monospace" font-weight="900" font-size="14.5" fill="#fde047" text-anchor="middle" letter-spacing="0.5">200W ±30W</text>
                             </g>
                         </g>
 
@@ -1226,29 +1226,12 @@
                     </div>
                 </div>
 
-                <!-- Right Column: Gameplay Rules, Donut Accuracy & Simulator Controls -->
+                <!-- Right Column: Gameplay Rules & Simulator Controls -->
                 <div class="lg:col-span-5 bg-gray-900/70 border border-gray-800 rounded-2xl p-4 flex flex-col justify-between gap-3">
                     <div class="flex flex-col gap-2.5">
                         <h3 class="text-xs font-black uppercase tracking-wider text-emerald-300">
                             Gameplay &amp; Simulator Configuration
                         </h3>
-
-                        <!-- Donut Accuracy Tolerance (Default 40W) -->
-                        <div class="bg-gray-950/85 border border-emerald-500/40 rounded-xl p-3">
-                            <div class="flex items-center justify-between gap-2 mb-1.5">
-                                <label for="accuracyToleranceSlider" class="text-xs font-bold text-gray-100">
-                                    Donut Gate Accuracy
-                                </label>
-                                <span id="accuracyToleranceBadge" class="text-sm font-mono font-black text-emerald-400">±40W</span>
-                            </div>
-                            <div class="flex items-center gap-2.5">
-                                <input id="accuracyToleranceSlider" type="range" min="5" max="50" step="1" value="40"
-                                       class="flex-grow accent-emerald-400 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-                                <input id="accuracyToleranceInput" type="number" min="5" max="50" step="1" value="40"
-                                       class="w-12 bg-gray-800 text-emerald-300 font-mono font-bold text-xs text-center rounded-lg px-1.5 py-1 border border-gray-700 focus:outline-none focus:border-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed">
-                            </div>
-                            <p class="text-[11px] text-gray-400 mt-1">Allowed power deviation (5W tight to 50W wide; default 40W).</p>
-                        </div>
 
                         <!-- Steering Enabled Toggle -->
                         <label for="steeringToggleCheck"
@@ -1943,7 +1926,7 @@
                     <div id="summaryMaxStreak" class="text-[10px] text-gray-400 truncate mt-0.5">Streak: 0s</div>
                 </div>
                 <div class="bg-gray-950/90 border border-emerald-500/40 rounded-xl px-2.5 py-2 text-center min-w-0">
-                    <div id="summaryZoneLabel" class="text-[10px] uppercase font-bold text-emerald-400 truncate">±40W Gate Zone</div>
+                    <div id="summaryZoneLabel" class="text-[10px] uppercase font-bold text-emerald-400 truncate">±30W Gate Zone</div>
                     <div id="summaryTimeInZone" class="text-lg sm:text-2xl font-black font-mono text-emerald-300 leading-tight mt-0.5">0.0%</div>
                     <div id="summaryTimeInZoneSec" class="text-[10px] text-gray-400 truncate mt-0.5">0s of 0s</div>
                 </div>

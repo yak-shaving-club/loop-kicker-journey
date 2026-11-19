@@ -31,7 +31,7 @@ All screenshots in `docs/screenshots/*.png` must adhere to the following exact s
 | File | Screen / State | Avatar (`#avatarSelect`) | Camera (`#cameraViewSelect`) | Resistance (`#resistanceModeSelect`) | Notes |
 |------|----------------|--------------------------|------------------------------|--------------------------------------|-------|
 | `01-start.png` | Splashscreen (`splash` / `#screenSplash`) | `aero_wyvern` | `1` (Chase) | `easy` | Pre-flight Dragon Splashscreen with hero artwork and **Start Setup** CTA (`#splashStartBtn`) |
-| `01-pairing.png` | Step 1: Pairing & Rules (`pairing` / `#screenPairing`) | `aero_wyvern` | `1` (Chase) | `easy` | Bluetooth/wireless pairing cards, `Steering: OFF (Auto-Fly Gates)`, `Auto-Fly Target Gate` checked, and `±40 W` Donut Gate Accuracy |
+| `01-pairing.png` | Step 1: Pairing & Rules (`pairing` / `#screenPairing`) | `aero_wyvern` | `1` (Chase) | `easy` | Bluetooth/wireless pairing cards, `Steering: OFF (Auto-Fly Gates)`, and `Auto-Fly Target Gate` checked |
 | `01-training.png` | Step 2: Training Selection (`training` / `#screenTraining`) | `aero_wyvern` | `1` (Chase) | `easy` | Workout profile preview (`#trainingPreviewCanvas`), FTP, resistance/wind mode, Zwift `.zwo` upload, and preset workout cards |
 | `01-avatar.png` | Step 3: Avatar Selection (`avatar` / `#screenAvatar`) | `aero_wyvern` | `1` (Chase) | `easy` | Camera pills, live 3D sky preview stage at target-gate altitude, 6 avatar cards, and **Start Flight** CTA (`#avatarStartFlightBtn`) |
 | `02-flight.png` | Active flight (`game` / `#screenGame`) | `aero_wyvern` | `1` (Chase) | `easy` | Active flight through target-watt donut gates |

@@ -14,6 +14,7 @@ const CAMERA_VIEWS = {
 };
 
 const FTP_TEST_STOP_THRESHOLD_SECONDS = 5;
+const DONUT_GATE_TOLERANCE_WATTS = 30;
 
 const state = {
     currentScreen: 'splash',
@@ -23,7 +24,6 @@ const state = {
     avatarType: 'aero_wyvern',
     cameraView: 1,
     ftp: 200,
-    accuracyToleranceWatts: 40,
     donutVisualSizeBoost: 1.0,
     resistanceMode: 'easy',
     currentGradientPct: 0.0,
@@ -403,9 +403,7 @@ function wattsToSkyAltitudeY(watts, ftp, gradientPct = 0) {
 }
 
 function getAccuracyToleranceWatts() {
-    const raw = Number(state.accuracyToleranceWatts);
-    if (!Number.isFinite(raw)) return 40;
-    return Math.max(5, Math.min(50, Math.round(raw)));
+    return DONUT_GATE_TOLERANCE_WATTS;
 }
 
 function getAccuracyToleranceFraction(targetWatts = state.ftp) {
@@ -414,17 +412,16 @@ function getAccuracyToleranceFraction(targetWatts = state.ftp) {
 }
 
 /**
- * Computes the 3D donut gate radius in world Y units so that it scales with the configurable
- * absolute watt accuracy tolerance (5W to 50W, i.e. `[targetWatts - tolWatts, targetWatts + tolWatts]`).
+ * Computes the 3D donut gate radius in world Y units for the fixed ±30W accuracy tolerance.
  * Keep `clampedTarget * 0.95` and `clampedTarget * 1.05` reference baseline in calculation.
  * Uses the linear above-minimum slope (48.0 world units per FTP) so that a gate at `minSessionWatts`
  * remains strictly above ground while its radius matches the ±toleranceWatts band.
  */
-function getDonutRadiusForTargetWatts(targetWatts, ftp, gradientPct = 0, toleranceWatts = getAccuracyToleranceWatts()) {
+function getDonutRadiusForTargetWatts(targetWatts, ftp, gradientPct = 0) {
     const refFtp = Math.max(100, ftp || 200);
     const scaleFtp = getAltitudeScaleFtp(state.workout, refFtp);
     const clampedTarget = Math.max(25, Number(targetWatts) || 0);
-    const tolW = Math.max(5, Math.min(50, Number(toleranceWatts) || 30));
+    const tolW = getAccuracyToleranceWatts();
     const centerY = wattsToSkyAltitudeY(clampedTarget, ftp, gradientPct);
     const refMin5 = wattsToSkyAltitudeY(clampedTarget * 0.95, ftp, gradientPct);
     const refMax5 = wattsToSkyAltitudeY(clampedTarget * 1.05, ftp, gradientPct);

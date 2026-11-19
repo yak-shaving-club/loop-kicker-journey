@@ -18,8 +18,6 @@ function buildGhostRideFile() {
         workoutName: state.workout.name,
         workoutXml: state.workoutXml,
         ftp: state.ftp,
-        // Donut Gate Accuracy (±W); sets the ring size, so the ghost race is replayed with the same rings
-        accuracyToleranceWatts: getAccuracyToleranceWatts(),
         resistanceMode: state.resistanceMode,
         avatarType: state.avatarType,
         finalScore: Math.round(state.totalScore),
@@ -87,9 +85,6 @@ function parseGhostRideFile(text) {
         score[sec] = current[2];
     }
 
-    // Optional (files saved before it was recorded don't have it)
-    const tol = data.accuracyToleranceWatts;
-    const accuracyToleranceWatts = Number.isInteger(tol) && tol >= 5 && tol <= 50 ? tol : null;
     const resistanceMode = GHOST_RESISTANCE_MODES.has(data.resistanceMode) ? data.resistanceMode : null;
     const gradientProfile = GHOST_WIND_COURSE_MODES.has(resistanceMode) ? parseGhostWindProfile(data.windProfile) : null;
     const ftp = Number.isInteger(data.ftp) && data.ftp >= 50 && data.ftp <= 600 ? data.ftp : null;
@@ -97,7 +92,6 @@ function parseGhostRideFile(text) {
 
     return {
         name: String(data.workoutName || 'Ghost Ride').slice(0, 80),
-        accuracyToleranceWatts,
         resistanceMode,
         gradientProfile,
         ftp,
@@ -153,8 +147,7 @@ function updateGhostUI() {
     if (hasGhost) {
         const recorded = state.ghost.recordedAt ? new Date(state.ghost.recordedAt) : null;
         const dateText = recorded && !isNaN(recorded) ? ` · ${recorded.toLocaleDateString()}` : '';
-        const tolText = state.ghost.accuracyToleranceWatts !== null ? ` · ±${state.ghost.accuracyToleranceWatts}W` : '';
-        label.textContent = `Ghost: ${formatSwissNumber(state.ghost.finalScore)} pts${dateText}${tolText}`;
+        label.textContent = `Ghost: ${formatSwissNumber(state.ghost.finalScore)} pts${dateText}`;
         chip.title = `Racing against a ghost ride of "${state.ghost.name}"${dateText}`;
     }
     updateAvatarReadySummaryUI();
@@ -216,9 +209,6 @@ function loadGhostRideFromText(text) {
         document.getElementById('resistanceModeSelect').value = ghost.resistanceMode;
     }
     loadWorkoutFromXml(ghost.workoutXml, presetKey);
-    if (ghost.accuracyToleranceWatts !== null) {
-        applyConfigurableAccuracyTolerance(ghost.accuracyToleranceWatts);
-    }
     setGhostRide(ghost);
     // Picks up the ghost's wind course now that the ghost is set
     regenerateSessionWindProfile();
@@ -274,7 +264,6 @@ function describeGhostRide(ride) {
     if (recorded && !isNaN(recorded)) parts.push(recorded.toLocaleDateString());
     if (ride.durationSec) parts.push(`${Math.max(1, Math.round(ride.durationSec / 60))} min`);
     if (ride.resistanceMode) parts.push(GHOST_MODE_LABELS[ride.resistanceMode] || ride.resistanceMode);
-    if (ride.accuracyToleranceWatts) parts.push(`±${ride.accuracyToleranceWatts}W`);
     if (ride.ftp) parts.push(`FTP ${ride.ftp}W`);
     const avatarOption = ride.avatarType && document.querySelector(`#avatarSelect option[value="${CSS.escape(ride.avatarType)}"]`);
     if (avatarOption) parts.push(avatarOption.textContent);
@@ -347,7 +336,7 @@ async function startGhostBattleFromFile(fileName, btn) {
 // Loads the ghost with all its recorded settings and starts the flight
 function startGhostBattle(text) {
     if (state.hasStartedSession) resetWorkoutSession();
-    // Workout, Donut Gate Accuracy, Mode & wind course
+    // Workout, Mode & wind course
     loadGhostRideFromText(text);
     const ghost = state.ghost;
     if (ghost.ftp !== null) {

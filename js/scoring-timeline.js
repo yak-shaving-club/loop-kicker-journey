@@ -396,13 +396,12 @@ function evaluateAccuracyTick(
     currentStreak,
     flewThroughDonut = true,
     dragonAltitudeDiff = 0,
-    donutRadius = 0,
-    toleranceWatts = getAccuracyToleranceWatts()
+    donutRadius = 0
 ) {
     if (targetWatts <= 0 || actualWatts <= 0 || !flewThroughDonut) {
         return { inZone: false, isBullseye: false, points: 0, ratioPct: 100, errorPct: 0, accuracyFactor: 0, combo: 1.0 };
     }
-    const tolW = Math.max(5, Math.min(50, Number(toleranceWatts) || 30));
+    const tolW = getAccuracyToleranceWatts();
     const ratioPct = (actualWatts / targetWatts) * 100;
     const errorWatts = Math.abs(actualWatts - targetWatts);
     const errorPct = (errorWatts / targetWatts) * 100;

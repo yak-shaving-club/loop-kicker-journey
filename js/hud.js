@@ -463,7 +463,7 @@ function executeWorkoutTick() {
     const prevCombo = state.comboMultiplier;
     const tolW = getAccuracyToleranceWatts();
     const gateY = wattsToSkyAltitudeY(targetWatts, state.ftp, state.currentGradientPct);
-    const donutRadius = getDonutRadiusForTargetWatts(targetWatts, state.ftp, state.currentGradientPct, tolW);
+    const donutRadius = getDonutRadiusForTargetWatts(targetWatts, state.ftp, state.currentGradientPct);
     const dragonClearanceY = dragon3D
         ? (typeof dragon3D.dragonClearanceY === 'number' ? dragon3D.dragonClearanceY : dragon3D.dragonCurrentY)
         : Infinity;
@@ -600,10 +600,6 @@ function syncActionButtonsUI() {
 
     const finishBtn = document.getElementById('finishWorkoutBtn');
     if (finishBtn) finishBtn.disabled = !state.hasStartedSession;
-    const accSliderEl = document.getElementById('accuracyToleranceSlider');
-    const accInputEl = document.getElementById('accuracyToleranceInput');
-    if (accSliderEl) accSliderEl.disabled = state.hasStartedSession;
-    if (accInputEl) accInputEl.disabled = state.hasStartedSession;
     updateHeaderAndSetupVisibility();
 }
 

@@ -505,41 +505,6 @@ document.getElementById('phoneSteerDisconnectBtn').addEventListener('click', () 
     }
 });
 
-function applyConfigurableAccuracyTolerance(rawVal) {
-    if (state.hasStartedSession) return;
-    const parsed = parseInt(rawVal, 10);
-    if (isNaN(parsed)) return;
-    const clamped = Math.max(5, Math.min(50, parsed));
-    state.accuracyToleranceWatts = clamped;
-    localStorage.setItem('loop_kicker_journey_accuracy_tolerance_watts', String(clamped));
-    const sliderEl = document.getElementById('accuracyToleranceSlider');
-    const inputEl = document.getElementById('accuracyToleranceInput');
-    const badgeEl = document.getElementById('accuracyToleranceBadge');
-    if (sliderEl) sliderEl.value = String(clamped);
-    if (inputEl) inputEl.value = String(clamped);
-    if (badgeEl) badgeEl.textContent = `±${clamped}W`;
-    if (dragon3D) {
-        dragon3D.gates.forEach(g => dragon3D.syncGateToDesiredWatts(g));
-    }
-    updateAvatarReadySummaryUI();
-    updateLiveHud();
-}
-
-document.getElementById('accuracyToleranceSlider').addEventListener('input', (e) => {
-    applyConfigurableAccuracyTolerance(e.target.value);
-});
-
-document.getElementById('accuracyToleranceInput').addEventListener('change', (e) => {
-    applyConfigurableAccuracyTolerance(e.target.value);
-});
-
-document.getElementById('accuracyToleranceInput').addEventListener('input', (e) => {
-    const val = parseInt(e.target.value, 10);
-    if (!isNaN(val) && val >= 5 && val <= 50) {
-        applyConfigurableAccuracyTolerance(val);
-    }
-});
-
 function regenerateSessionWindProfile() {
     if (state.workout) {
         state.gradientProfile = buildSessionGradientProfile();
@@ -1179,12 +1144,6 @@ document.getElementById('summaryFlyAgainBtn').addEventListener('click', () => {
     if (!isNaN(savedFtp) && savedFtp >= 50 && savedFtp <= 600) {
         state.ftp = savedFtp;
         document.getElementById('ftpInput').value = savedFtp;
-    }
-    const savedTol = parseInt(localStorage.getItem('loop_kicker_journey_accuracy_tolerance_watts'), 10);
-    if (!isNaN(savedTol) && savedTol >= 5 && savedTol <= 50) {
-        applyConfigurableAccuracyTolerance(savedTol);
-    } else {
-        applyConfigurableAccuracyTolerance(state.accuracyToleranceWatts);
     }
     const savedSteering = localStorage.getItem('loop_kicker_journey_steering_enabled');
     syncSoundButtonsUI();
