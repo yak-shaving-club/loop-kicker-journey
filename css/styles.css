@@ -87,3 +87,7 @@ html.phone-steer-mode body > *:not(#mobilePhoneControllerView):not(script) {
 html.phone-steer-mode #mobilePhoneControllerView {
     display: flex !important;
 }
+/* One segment per ring between ring-streak bonuses (RING_STREAK_MILESTONE = 15) */
+.streak-bar-ticks {
+    background-image: repeating-linear-gradient(to right, transparent 0, transparent calc(100% / 15 - 1px), rgba(255, 255, 255, 0.14) calc(100% / 15 - 1px), rgba(255, 255, 255, 0.14) calc(100% / 15));
+}

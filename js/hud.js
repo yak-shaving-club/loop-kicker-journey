@@ -71,7 +71,7 @@ function updateLiveHud() {
         }
     }
 
-    // Upper-Right Orange Game Points, Streak Duration, Currently Pedaled Watts, Heart Rate, Cadence & Speed
+    // Upper-Right Points & Speed, Streak Progress Bar, Centered Watts, Heart Rate & Cadence
     const scoreEl = document.getElementById('totalScoreDisplay');
     if (scoreEl) {
         const formattedScore = formatSwissNumber(state.totalScore);
@@ -84,6 +84,7 @@ function updateLiveHud() {
     }
     const streakEl = document.getElementById('streakSecondsText');
     if (streakEl) streakEl.textContent = `${formatSwissNumber(state.streakSeconds)}s`;
+    updateStreakBar();
     const actualWattsEl = document.getElementById('actualWattsDisplay');
     if (actualWattsEl) actualWattsEl.textContent = formatSwissNumber(state.actualWatts);
     const heartRateEl = document.getElementById('heartRateDisplay');
@@ -100,6 +101,29 @@ function updateLiveHud() {
     updateFtpTestHudUI();
     updateExpectedWorkoutMetricsUI();
     drawWorkoutTimeline();
+}
+
+// Fills from left to right until the next ring-streak bonus, then starts over.
+function updateStreakBar() {
+    const fillEl = document.getElementById('streakBarFill');
+    const nextEl = document.getElementById('streakNextBonusText');
+    if (!fillEl) return;
+
+    const streak = state.streakSeconds;
+    const progress = streak % RING_STREAK_MILESTONE;
+    const milestoneReached = streak > 0 && progress === 0;
+    const pct = milestoneReached ? 100 : (progress / RING_STREAK_MILESTONE) * 100;
+    const prevPct = parseFloat(fillEl.style.width) || 0;
+    // Jump back instantly on reset/break instead of animating the bar backwards
+    fillEl.style.transition = pct < prevPct ? 'none' : '';
+    fillEl.style.width = `${pct}%`;
+
+    if (nextEl) {
+        const currentTier = Math.floor(streak / RING_STREAK_MILESTONE);
+        nextEl.textContent = milestoneReached
+            ? `Bonus +${formatSwissNumber(RING_STREAK_BONUS_PER_TIER * currentTier)}!`
+            : `Next bonus in ${RING_STREAK_MILESTONE - progress}s · +${formatSwissNumber(RING_STREAK_BONUS_PER_TIER * (currentTier + 1))}`;
+    }
 }
 
 function computeBestOneMinuteAvgWatts(samples = state.samples) {
@@ -496,6 +520,7 @@ function executeWorkoutTick() {
         state.comboMultiplier = 1.0;
         state.lastPointsAwarded = 0;
     }
+    spawnGhostCollectedPoints();
 
     state.samples.push({
         timestampMs: Date.now(),
@@ -614,7 +639,7 @@ function resetWorkoutSession() {
     state.elapsedSec = 0;
     state.startTimeMs = null;
     if (state.workout) {
-        state.gradientProfile = generateTerrainGradientProfile(state.workout.totalDuration, state.resistanceMode);
+        state.gradientProfile = buildSessionGradientProfile();
     }
     regenerateRandomCanyonPath();
     syncGradientAtSecond(0);
