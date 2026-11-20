@@ -1,0 +1,11 @@
+.git
+.github
+.idea
+*.iml
+.DS_Store
+**/.DS_Store
+Dockerfile
+.dockerignore
+escargozzled/scores.json
+docs
+escargozzled/docs

@@ -1,0 +1,1 @@
+docker buildx build --no-cache --push --platform linux/amd64 --tag jonitooo/loop-kicker-journey:1.0.1 .

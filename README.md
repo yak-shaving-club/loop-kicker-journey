@@ -26,9 +26,20 @@ Simulation mode is enabled by default, so you can try the game without a trainer
 
 For an HTTPS deployment behind a reverse proxy, set `APP_ORIGIN` to the public origin in the server environment.
 
+### Docker
+
+`server.js` serves the whole game, Escargozzled, and both APIs, so a single container is enough:
+
+```bash
+docker build -t loop-kicker-journey .
+docker run -d -p 8000:8000 -v loop-kicker-journey-data:/data loop-kicker-journey
+```
+
+Then open `http://localhost:8000`. Ghost rides and Escargozzled highscores are stored in `/data` (`GHOSTRIDES_DIR=/data/ghostrides`, `ESCARGOZZLED_SCORES_FILE=/data/scores.json`), either as a named volume or as a mounted host folder. On every start, [`docker-start.sh`](docker-start.sh) copies the ghost rides bundled in `data/ghostrides/` into `GHOSTRIDES_DIR` without overwriting existing files. The container runs as user `node` (UID 1000), so a mounted host folder must be writable for it (for example `chown -R 1000:1000 <host folder>`); otherwise the log shows a warning and highscores cannot be saved. To use Bluetooth from other devices, put an HTTPS reverse proxy in front of the container and set `APP_ORIGIN` (for example `-e APP_ORIGIN=https://loop.example.com`).
+
 ## Gameplay and workout controls
 
-Your current power is compared with the workout's target power. The game displays power accuracy, workout intervals, and progress in the HUD; watts, heart rate, and cadence are shown large at the top center, points and speed at the top right. Clearing consecutive donut gates in-zone builds your combo multiplier and awards tiered **Ring Streak** bonuses every 15 rings (`+250` points per tier, from *Nice Streak!* to *Legendary!*) with visual splash banners and ascending arpeggios. A full-width streak bar above the timeline fills up ring by ring until the next bonus. FTP (200 W by default; adjustable from 50 to 600 W) is used to calculate power targets specified as a percentage of FTP. Donut gate size and allowed power deviation are fixed at `±30 W`.
+Your current power is compared with the workout's target power. The game displays power accuracy, workout intervals, and progress in the HUD; watts, heart rate, and cadence are shown large at the top center, points (and the comparison with a loaded ghost ride) at the top right. Clearing consecutive donut gates in-zone builds your combo multiplier and awards tiered **Ring Streak** bonuses every 15 rings (`+250` points per tier, from *Nice Streak!* to *Legendary!*) with visual splash banners and ascending arpeggios. A full-width streak bar above the timeline fills up ring by ring until the next bonus. FTP (200 W by default; adjustable from 50 to 600 W) is used to calculate power targets specified as a percentage of FTP. Donut gate size and allowed power deviation are fixed at `±30 W`.
 
 Available workouts can be filtered by duration and physiological intensity:
 
@@ -64,7 +75,7 @@ Transitions are smoothed so short target changes don't toggle the music. The mus
 | `↑` / `↓` | Increase/decrease power by 10 W in simulation mode |
 | `Shift` + `↑` / `↓` | Increase/decrease power by 25 W in simulation mode |
 
-You can turn off manual steering to have the avatar automatically steer through the gates. Obstacles can be enabled or disabled with the corresponding option.
+You can turn off manual steering to have the avatar automatically steer through the gates. Obstacles can be enabled or disabled with the corresponding option. Watch out for the red birds flying towards you: colliding with one costs 200 points (bird strike).
 
 ## Avatars
 

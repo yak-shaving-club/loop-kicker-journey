@@ -481,6 +481,17 @@ function spawnArrowHitPenaltyPopup(penaltyPts) {
     setTimeout(() => el.remove(), 1200);
 }
 
+function spawnBirdStrikePopup(penaltyPts) {
+    const container = document.getElementById('floatingScoreContainer');
+    const el = document.createElement('div');
+    el.className = 'floating-score absolute font-black font-mono text-center select-none text-rose-400 text-2xl sm:text-3xl drop-shadow-[0_0_16px_rgba(244,63,94,0.95)]';
+    el.style.left = '44%';
+    el.style.top = '38%';
+    el.innerHTML = `-${penaltyPts} PTS<div class="text-xs font-extrabold uppercase tracking-wider text-yellow-300">BIRD STRIKE! STEER AROUND THE BIRDS!</div>`;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 1250);
+}
+
 function getZoneColorForFraction(ftpFraction) {
     if (ftpFraction < 0.56) return { fill: 'rgba(148, 163, 184, 0.65)', stroke: '#94a3b8' };
     if (ftpFraction < 0.76) return { fill: 'rgba(59, 130, 246, 0.65)', stroke: '#60a5fa' };

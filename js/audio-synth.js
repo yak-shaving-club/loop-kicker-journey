@@ -60,6 +60,37 @@ class ArcadeSoundEngine {
         this.playTone(135, 220, 'sawtooth', 0.11);
         setTimeout(() => this.playTone(98, 280, 'square', 0.10), 90);
     }
+    playNoiseBurst(durationMs, gainVal, lowpassHz) {
+        if (!this.enabled) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const length = Math.max(1, Math.floor(this.ctx.sampleRate * durationMs / 1000));
+            const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+            const source = this.ctx.createBufferSource();
+            source.buffer = buffer;
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(lowpassHz, this.ctx.currentTime);
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + durationMs / 1000);
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            source.start();
+        } catch (_) {}
+    }
+    playBirdCrash() {
+        // Feathery impact crunch, a low body thump and a short squawk
+        this.playNoiseBurst(360, 0.24, 1600);
+        this.playTone(92, 300, 'sawtooth', 0.12);
+        setTimeout(() => this.playTone(58, 280, 'square', 0.09), 70);
+        setTimeout(() => this.playTone(1480, 110, 'square', 0.035), 40);
+        setTimeout(() => this.playTone(1180, 90, 'square', 0.03), 130);
+    }
     playFinishFanfare() {
         const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((n, idx) => {

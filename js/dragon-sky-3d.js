@@ -68,6 +68,13 @@ const TERRAIN_TEXTURE_TILE_SIZE = 32;
 // Whole number of texture tiles; UV origin is re-based by this amount to keep float precision high
 const TERRAIN_UV_REBASE_DISTANCE = TERRAIN_TEXTURE_TILE_SIZE * 64;
 
+// Oncoming birds: size, hit box around the dragon and bird strike consequences
+const BIRD_SCALE = 1.6;
+const BIRD_HIT_HALF_WIDTH_X = 4.2;
+const BIRD_HIT_HALF_HEIGHT_Y = 3.4;
+const BIRD_STRIKE_PENALTY_POINTS = 200;
+const BIRD_STRIKE_SHAKE_SEC = 0.5;
+
 class DragonSky3DEngine {
     constructor(containerEl) {
         this.container = containerEl;
@@ -96,6 +103,7 @@ class DragonSky3DEngine {
         this.hunterArrows = [];
         this.fireballs = [];
         this.explosionFragments = [];
+        this.cameraShakeTime = 0;
         this.trees = [];
         this.bushes = [];
         this.stones = [];
@@ -1969,24 +1977,46 @@ class DragonSky3DEngine {
     }
 
     buildFlockOfBirds() {
-        const wingGeo = new THREE.BoxGeometry(1.25, 0.08, 0.45);
-        const birdMat = new THREE.MeshLambertMaterial({ color: 0xfef08a });
+        // Large dark-bodied birds with glowing red wings so oncoming birds stand out against sky and canyon
+        const wingGeo = new THREE.BoxGeometry(2.4, 0.12, 0.95);
+        const wingTipGeo = new THREE.BoxGeometry(0.9, 0.1, 0.7);
+        const bodyGeo = new THREE.SphereGeometry(0.5, 10, 8);
+        bodyGeo.scale(1.0, 0.8, 1.9);
+        const headGeo = new THREE.SphereGeometry(0.4, 10, 8);
+        const beakGeo = new THREE.ConeGeometry(0.17, 0.6, 6);
+        beakGeo.rotateX(Math.PI / 2);
+        const bodyMat = new THREE.MeshLambertMaterial({ color: 0x111827, emissive: 0x3f0d0d });
+        const wingMat = new THREE.MeshLambertMaterial({ color: 0xef4444, emissive: 0x991b1b });
+        const wingTipMat = new THREE.MeshLambertMaterial({ color: 0x111827, emissive: 0x1f0a0a });
+        const beakMat = new THREE.MeshLambertMaterial({ color: 0xfbbf24, emissive: 0xb45309 });
+
+        const buildWing = (side) => {
+            const pivot = new THREE.Group();
+            const wing = new THREE.Mesh(wingGeo, wingMat);
+            wing.position.x = side * 1.25;
+            pivot.add(wing);
+            const tip = new THREE.Mesh(wingTipGeo, wingTipMat);
+            tip.position.x = side * 2.85;
+            pivot.add(tip);
+            return pivot;
+        };
 
         for (let i = 0; i < 24; i++) {
             const birdGroup = new THREE.Group();
-            const leftWingPivot = new THREE.Group();
-            const rightWingPivot = new THREE.Group();
+            birdGroup.add(new THREE.Mesh(bodyGeo, bodyMat));
+            const head = new THREE.Mesh(headGeo, bodyMat);
+            head.position.set(0, 0.25, 1.05);
+            birdGroup.add(head);
+            // Birds fly towards the dragon (+Z), so the beak points at the player
+            const beak = new THREE.Mesh(beakGeo, beakMat);
+            beak.position.set(0, 0.2, 1.6);
+            birdGroup.add(beak);
 
-            const leftWing = new THREE.Mesh(wingGeo, birdMat);
-            leftWing.position.x = -0.6;
-            leftWingPivot.add(leftWing);
-
-            const rightWing = new THREE.Mesh(wingGeo, birdMat);
-            rightWing.position.x = 0.6;
-            rightWingPivot.add(rightWing);
-
+            const leftWingPivot = buildWing(-1);
+            const rightWingPivot = buildWing(1);
             birdGroup.add(leftWingPivot);
             birdGroup.add(rightWingPivot);
+            birdGroup.scale.setScalar(BIRD_SCALE);
 
             const zPos = -Math.random() * 440;
             const xOffset = (Math.random() - 0.5) * 90;
@@ -2001,9 +2031,54 @@ class DragonSky3DEngine {
                 flapOffset: Math.random() * Math.PI * 2,
                 flapSpeed: 10 + Math.random() * 5,
                 xOffset,
-                yBase: yPos
+                yBase: yPos,
+                hit: false,
+                lastRelZ: null
             });
         }
+    }
+
+    /**
+     * Bird strike: costs BIRD_STRIKE_PENALTY_POINTS and plays a crash sound, a feather burst, camera shake and a red flash.
+     */
+    handleBirdStrike(bird, forwardSpeed) {
+        bird.hit = true;
+        bird.group.visible = false;
+
+        state.totalScore = Math.max(0, state.totalScore - BIRD_STRIKE_PENALTY_POINTS);
+        soundEngine.playBirdCrash();
+        spawnBirdStrikePopup(BIRD_STRIKE_PENALTY_POINTS);
+
+        // Feathers keep pace with the dragon so the burst stays in view before tumbling away
+        const featherGeo = new THREE.PlaneGeometry(1.1, 0.4);
+        const featherColors = [0xef4444, 0x111827, 0xfbbf24, 0xf8fafc];
+        for (let i = 0; i < 26; i++) {
+            const mat = new THREE.MeshBasicMaterial({
+                color: featherColors[i % featherColors.length],
+                side: THREE.DoubleSide
+            });
+            const feather = new THREE.Mesh(featherGeo, mat);
+            feather.position.copy(bird.group.position);
+            this.scene.add(feather);
+            this.explosionFragments.push({
+                mesh: feather,
+                vx: (Math.random() - 0.5) * 26,
+                vy: (Math.random() - 0.2) * 20,
+                vz: -forwardSpeed * 0.85 + (Math.random() - 0.5) * 18,
+                gravity: 14,
+                life: 1.1
+            });
+        }
+
+        this.cameraShakeTime = BIRD_STRIKE_SHAKE_SEC;
+
+        const arenaCard = document.getElementById('hudArenaCard');
+        arenaCard.classList.remove('bird-strike-flash');
+        void arenaCard.offsetWidth;
+        arenaCard.classList.add('bird-strike-flash');
+        setTimeout(() => arenaCard.classList.remove('bird-strike-flash'), 600);
+
+        updateLiveHud();
     }
 
     /**
@@ -2150,6 +2225,12 @@ class DragonSky3DEngine {
         this.camera.position.set(camX, Math.max(camMinGroundY, camYRaw), camZ);
         this.camera.lookAt(chaseLook[0], chaseLook[1], chaseLook[2]);
         this.camera.rotation.z = this.dragonRollAngle * 0.14;
+        if (this.cameraShakeTime > 0) {
+            const strength = this.cameraShakeTime / BIRD_STRIKE_SHAKE_SEC;
+            this.camera.position.x += (Math.random() - 0.5) * 1.6 * strength;
+            this.camera.position.y += (Math.random() - 0.5) * 1.2 * strength;
+            this.camera.rotation.z += (Math.random() - 0.5) * 0.12 * strength;
+        }
         this.cameraLastLook = chaseLook;
     }
 
@@ -2900,6 +2981,9 @@ class DragonSky3DEngine {
         });
         this.birds.forEach((b, i) => {
             const zPos = -40 - ((i * 23) % 360);
+            b.hit = false;
+            b.group.visible = true;
+            b.lastRelZ = null;
             b.group.position.z = zPos;
             b.group.position.x = getSimulatedTurnOffsetX(zPos) + b.xOffset;
             b.group.position.y = this.getCanyonFloorElevationAtZ(zPos) + b.yBase;
@@ -3677,6 +3761,7 @@ class DragonSky3DEngine {
             this.cameraLookTargetY += (desiredLookTargetY - this.cameraLookTargetY) * Math.min(1, dt * 3.5);
         }
 
+        this.cameraShakeTime = Math.max(0, this.cameraShakeTime - dt);
         this.applyChaseCamera(
             [camX, this.cameraCurrentY, camZ],
             [lookTargetX, this.cameraLookTargetY, lookTargetZ]
@@ -3722,7 +3807,7 @@ class DragonSky3DEngine {
                 }
             });
 
-            // Animate & recycle flocks of birds
+            // Animate & recycle flocks of birds; a bird crossing the dragon's position within the hit box is a bird strike
             this.birds.forEach((b) => {
                 b.flapOffset += dt * b.flapSpeed;
                 const flap = Math.sin(b.flapOffset) * 0.65;
@@ -3732,8 +3817,20 @@ class DragonSky3DEngine {
                 if (b.group.position.z > this.flightZ + 24) {
                     b.group.position.z = this.flightZ - 380 - Math.random() * 60;
                     b.group.position.x = getSimulatedTurnOffsetX(b.group.position.z) + b.xOffset;
+                    b.hit = false;
+                    b.group.visible = true;
+                    b.lastRelZ = null;
                 }
                 b.group.position.y = this.getCanyonFloorElevationAtZ(b.group.position.z) + b.yBase + Math.sin(b.flapOffset * 0.5) * 0.5;
+
+                const relZ = b.group.position.z - this.flightZ;
+                const crossedDragon = b.lastRelZ !== null && b.lastRelZ < 0 && relZ >= 0;
+                b.lastRelZ = relZ;
+                if (!b.hit && crossedDragon
+                    && Math.abs(b.group.position.x - dragonWorldX) <= BIRD_HIT_HALF_WIDTH_X
+                    && Math.abs(b.group.position.y - this.dragonCurrentY) <= BIRD_HIT_HALF_HEIGHT_Y) {
+                    this.handleBirdStrike(b, forwardSpeed);
+                }
             });
         }
 
@@ -3987,6 +4084,7 @@ class DragonSky3DEngine {
         // Update Explosion Shards
         for (let i = this.explosionFragments.length - 1; i >= 0; i--) {
             const ef = this.explosionFragments[i];
+            if (ef.gravity) ef.vy -= ef.gravity * dt;
             ef.mesh.position.x += ef.vx * dt;
             ef.mesh.position.y += ef.vy * dt;
             ef.mesh.position.z += ef.vz * dt;
