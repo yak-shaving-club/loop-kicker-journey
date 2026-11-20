@@ -1,6 +1,3 @@
 /loop-kicker-journey.iml
-.env
-.env.*
-!.env.example
 /.idea/
 .DS_Store

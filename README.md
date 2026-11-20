@@ -148,9 +148,8 @@ Without this flag, devices must be paired manually after every page load. Messag
   - [`ghost-rides.js`](js/ghost-rides.js) – Saving and racing ghost rides
   - [`main.js`](js/main.js) – Event listeners and initialization (must stay last)
 - [`server.js`](server.js) – Local static web server, ghost ride API for **Ghost Battle** (`/api/ghostrides`, reads `data/ghostrides/`), and the Escargozzled highscore API (`/api/escargozzled/scores`, writes `escargozzled/scores.json`; set `ESCARGOZZLED_SCORES_FILE` to use a different file)
-- [`escargozzled/`](escargozzled/) – **Escargozzled**, a small WebGL bonus game (racing snail, Avanti watts & Sterzo steering), linked below the main card on the splashscreen and served at `/escargozzled/`. It shares the Three.js build, `sterzo-challenge-codes.js`, and `server.js` with Loop Kicker Journey; see its [README](escargozzled/README.md)
-- [`.env.example`](.env.example) – Example server configuration
+- [`escargozzled/`](escargozzled/) – **Escargozzled**, a small WebGL bonus game (racing snail, Avanti watts & Sterzo steering), linked below the main card on the splashscreen and served at `/escargozzled/`. It shares the Three.js build, [`sensordata/sterzo-challenge-codes.js`](sensordata/sterzo-challenge-codes.js), and `server.js` with Loop Kicker Journey; see its [README](escargozzled/README.md)
 - [`loop-kicker-journey-models.js`](loop-kicker-journey-models.js) – 3D models
-- [`sterzo-challenge-codes.js`](sterzo-challenge-codes.js) – Sterzo challenge/response table (also used by Escargozzled); the source code attributes it to `pycycling` under the MIT license
+- [`sensordata/sterzo-challenge-codes.js`](sensordata/sterzo-challenge-codes.js) – Sterzo challenge/response table (also used by Escargozzled); the source code attributes it to `pycycling` under the MIT license
 - [`loop-kicker-journey.svg`](loop-kicker-journey.svg) – Logo and favicon
 - [`docs/screenshots/`](docs/screenshots/) – Documentation screenshots
