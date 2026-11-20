@@ -129,12 +129,6 @@ function spawnGhostCollectedPoints() {
     spawnGhostScorePopup(gained, dragon3D ? dragon3D.getGhostScreenPosition() : null);
 }
 
-function formatSignedGhostValue(value, unit) {
-    const rounded = Math.round(value);
-    const sign = rounded > 0 ? '+' : (rounded < 0 ? '−' : '±');
-    return `${sign}${formatSwissNumber(Math.abs(rounded))} ${unit}`;
-}
-
 function updateGhostUI() {
     const chip = document.getElementById('ghostStatusChip');
     const label = document.getElementById('ghostStatusLabel');
@@ -170,10 +164,19 @@ function syncRerollWindProfileButton() {
 function updateGhostHud() {
     if (!state.ghost) return;
     const totals = getGhostRideTotalsAfterSecond(state.elapsedSec - 1);
-    const scoreDelta = state.totalScore - totals.score;
+    const scoreDelta = Math.round(state.totalScore - totals.score);
     const scoreEl = document.getElementById('ghostScoreDeltaDisplay');
-    scoreEl.textContent = formatSignedGhostValue(scoreDelta, 'pts');
-    scoreEl.className = `text-[10px] sm:text-xs font-black tabular-nums ${scoreDelta >= 0 ? 'text-emerald-300' : 'text-rose-300'}`;
+    const baseClass = 'px-2 py-0.5 rounded-lg border text-xs sm:text-sm font-black tabular-nums whitespace-nowrap';
+    if (scoreDelta > 0) {
+        scoreEl.textContent = `▲ ${formatSwissNumber(scoreDelta)} pts ahead`;
+        scoreEl.className = `${baseClass} bg-emerald-500/15 border-emerald-400/50 text-emerald-300`;
+    } else if (scoreDelta < 0) {
+        scoreEl.textContent = `▼ ${formatSwissNumber(-scoreDelta)} pts behind`;
+        scoreEl.className = `${baseClass} bg-rose-500/15 border-rose-400/50 text-rose-300`;
+    } else {
+        scoreEl.textContent = 'Tied';
+        scoreEl.className = `${baseClass} bg-gray-500/15 border-gray-400/40 text-gray-200`;
+    }
     document.getElementById('ghostWattsDisplay').textContent = Math.round(getGhostRideWattsAtSecond(state.elapsedSec));
 }
 
