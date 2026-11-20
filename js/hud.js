@@ -71,7 +71,7 @@ function updateLiveHud() {
         }
     }
 
-    // Upper-Right Points & Speed, Streak Progress Bar, Centered Watts, Heart Rate & Cadence
+    // Upper-Right Points, Streak Progress Bar, Centered Watts, Heart Rate & Cadence
     const scoreEl = document.getElementById('totalScoreDisplay');
     if (scoreEl) {
         const formattedScore = formatSwissNumber(state.totalScore);
@@ -95,8 +95,6 @@ function updateLiveHud() {
     }
     const cadenceEl = document.getElementById('cadenceDisplay');
     if (cadenceEl) cadenceEl.textContent = formatSwissNumber(state.cadence);
-    const speedEl = document.getElementById('speedDisplay');
-    if (speedEl) speedEl.textContent = (Number(state.speedKmh) || 0).toFixed(1);
 
     updateFtpTestHudUI();
     updateExpectedWorkoutMetricsUI();
@@ -328,8 +326,7 @@ function computeTrainingMetrics() {
             totalWorkJoules: 0,
             avgCadence: 0,
             avgHeartRate: null,
-            maxHeartRate: null,
-            totalDistanceMeters: 0
+            maxHeartRate: null
         };
     }
 
@@ -388,7 +385,6 @@ function computeTrainingMetrics() {
         avgCadence,
         avgHeartRate,
         maxHeartRate: resolvedMaxHeartRate,
-        totalDistanceMeters: state.totalDistanceMeters,
         ftp
     };
 }
@@ -423,7 +419,6 @@ function executeWorkoutTick() {
             state.cadence = state.actualWatts > 0 ? Math.round(88 + (Math.random() - 0.5) * 6) : 0;
         }
     }
-    syncLiveFlightSpeed(state.currentGradientPct);
 
     const isFtpTest = Boolean(state.workout && state.workout.isFtpTest);
     const hasDedicatedCadenceZero = !state.simMode && bleCadenceSensor.connected && state.cadence <= 0 && state.actualWatts < 20;
@@ -432,7 +427,6 @@ function executeWorkoutTick() {
     // Stop forward motion and workout progression when the user is not generating any watts
     if (riderStoppedPedaling) {
         if (!bleCadenceSensor.connected) state.cadence = 0;
-        state.speedKmh = 0;
         state.streakSeconds = 0;
         state.comboMultiplier = 1.0;
         state.lastPointsAwarded = 0;
@@ -456,9 +450,6 @@ function executeWorkoutTick() {
         state.ftpTestPedalingStarted = true;
         state.ftpTestZeroPedalSeconds = 0;
     }
-
-    const speedMps = state.speedKmh / 3.6;
-    state.totalDistanceMeters += speedMps;
 
     const prevCombo = state.comboMultiplier;
     const tolW = getAccuracyToleranceWatts();
@@ -529,8 +520,6 @@ function executeWorkoutTick() {
         actualWatts: state.actualWatts,
         heartRate: state.heartRate,
         cadence: state.cadence,
-        speedMps,
-        distanceMeters: state.totalDistanceMeters,
         gradientPct: state.currentGradientPct,
         inZone: evalRes.inZone,
         isBullseye: evalRes.isBullseye,
@@ -556,7 +545,6 @@ function executeWorkoutTick() {
             slider.value = state.actualWatts;
             document.getElementById('simWattReadout').textContent = `${state.actualWatts} W`;
         }
-        syncLiveFlightSpeed(state.currentGradientPct);
     }
 
     updateLiveHud();
@@ -568,36 +556,6 @@ function executeWorkoutTick() {
 }
 
 function syncActionButtonsUI() {
-    const startBtnText = document.getElementById('startBtnText');
-    const startWorkoutBtn = document.getElementById('startWorkoutBtn');
-    const compactPauseResumeText = document.getElementById('compactPauseResumeText');
-    const compactPauseResumeBtn = document.getElementById('compactPauseResumeBtn');
-
-    if (state.isRunning) {
-        if (startBtnText) startBtnText.textContent = 'Pause Flight';
-        if (startWorkoutBtn) {
-            startWorkoutBtn.className =
-                'px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-gray-950 font-black text-xs tracking-wide uppercase flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer shadow-lg shadow-amber-500/25 transition';
-        }
-        if (compactPauseResumeText) compactPauseResumeText.textContent = 'Pause Flight';
-        if (compactPauseResumeBtn) {
-            compactPauseResumeBtn.className =
-                'px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-gray-950 font-black text-xs uppercase tracking-wide flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer shadow transition';
-        }
-    } else {
-        const label = state.hasStartedSession ? 'Resume Flight' : 'Start Flight';
-        if (startBtnText) startBtnText.textContent = label;
-        if (startWorkoutBtn) {
-            startWorkoutBtn.className =
-                'px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-400 hover:from-emerald-400 hover:to-green-300 text-gray-950 font-black text-xs tracking-wide uppercase flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer shadow-lg shadow-emerald-500/25 transition';
-        }
-        if (compactPauseResumeText) compactPauseResumeText.textContent = label;
-        if (compactPauseResumeBtn) {
-            compactPauseResumeBtn.className =
-                'px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-400 hover:from-emerald-400 hover:to-green-300 text-gray-950 font-black text-xs uppercase tracking-wide flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer shadow transition';
-        }
-    }
-
     const finishBtn = document.getElementById('finishWorkoutBtn');
     if (finishBtn) finishBtn.disabled = !state.hasStartedSession;
     updateHeaderAndSetupVisibility();
@@ -605,25 +563,25 @@ function syncActionButtonsUI() {
 
 let dragon3D = null;
 
-function startOrPauseWorkout() {
-    if (!state.workout) return;
-
-    if (!state.isRunning) {
-        if (state.currentScreen !== 'game') {
-            setScreen('game');
-        }
-        if (state.elapsedSec >= state.workout.totalDuration) {
-            resetWorkoutSession();
-        }
-        if (!state.startTimeMs) {
-            state.startTimeMs = Date.now();
-        }
-        state.hasStartedSession = true;
-        state.forceShowSetupDuringTraining = false;
-        state.isRunning = true;
-    } else {
-        state.isRunning = false;
+function startFlight() {
+    if (!state.workout || state.isRunning) return;
+    soundEngine.init();
+    if (state.elapsedSec >= state.workout.totalDuration) {
+        resetWorkoutSession();
     }
+    if (!state.startTimeMs) {
+        state.startTimeMs = Date.now();
+    }
+    state.hasStartedSession = true;
+    state.forceShowSetupDuringTraining = false;
+    state.isRunning = true;
+    syncActionButtonsUI();
+    updateLiveHud();
+}
+
+function pauseFlight() {
+    if (!state.isRunning) return;
+    state.isRunning = false;
     syncActionButtonsUI();
     updateLiveHud();
 }
@@ -639,8 +597,6 @@ function resetWorkoutSession() {
     }
     regenerateRandomCanyonPath();
     syncGradientAtSecond(0);
-    syncLiveFlightSpeed(state.currentGradientPct);
-    state.totalDistanceMeters = 0;
     state.totalScore = 0;
     state.lastPointsAwarded = 0;
     state.streakSeconds = 0;
@@ -690,8 +646,6 @@ function finishWorkoutAndShowSummary() {
             actualWatts: state.actualWatts || targetWatts,
             heartRate: state.heartRate,
             cadence: state.cadence || 85,
-            speedMps: estimateSpeedMpsFromWatts(state.actualWatts || targetWatts, state.currentGradientPct),
-            distanceMeters: 10,
             inZone: true,
             isBullseye: false,
             points: 50
@@ -795,7 +749,6 @@ function finishWorkoutAndShowSummary() {
     document.getElementById('summaryAvgWatts').textContent = Math.round(metrics.avgWatts);
     document.getElementById('summaryMaxWatts').textContent = Math.round(metrics.maxWatts);
     document.getElementById('summaryDuration').textContent = formatDuration(metrics.durationSec);
-    document.getElementById('summaryDistance').textContent = (metrics.totalDistanceMeters / 1000).toFixed(2);
     document.getElementById('summaryTss').textContent = metrics.tss.toFixed(1);
     document.getElementById('summaryFtpUsed').textContent = previousFtp;
     document.getElementById('summaryNp').textContent = Math.round(metrics.normalizedPower);

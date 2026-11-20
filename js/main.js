@@ -62,9 +62,7 @@ function setAvatarType(avatarType) {
     localStorage.setItem('loop_kicker_journey_avatar_type', chosen);
 
     const mainSel = document.getElementById('avatarSelect');
-    const compactSel = document.getElementById('compactAvatarSelect');
     if (mainSel) mainSel.value = chosen;
-    if (compactSel) compactSel.value = chosen;
     syncAvatarCardsUI();
 
     if (dragon3D) {
@@ -87,46 +85,6 @@ if (avatarSelectEl) {
     });
 }
 
-const compactAvatarSelectEl = document.getElementById('compactAvatarSelect');
-if (compactAvatarSelectEl) {
-    compactAvatarSelectEl.addEventListener('change', (e) => {
-        setAvatarType(e.target.value);
-    });
-}
-
-function syncCameraPillsUI() {
-    document.querySelectorAll('[data-camera-pill]').forEach((pill) => {
-        const active = parseInt(pill.getAttribute('data-camera-pill'), 10) === state.cameraView;
-        pill.className = active
-            ? 'px-2.5 py-1 rounded-lg text-xs font-black border transition cursor-pointer bg-sky-500/25 text-sky-200 border-sky-400/60 shadow'
-            : 'px-2.5 py-1 rounded-lg text-xs font-bold border transition cursor-pointer bg-gray-900/80 hover:bg-gray-800 text-gray-300 border-gray-800';
-    });
-}
-
-function setCameraView(view) {
-    const chosen = CAMERA_VIEWS[view] ? Number(view) : 1;
-    state.cameraView = chosen;
-    localStorage.setItem('loop_kicker_journey_camera_view', String(chosen));
-    ['cameraViewSelect', 'compactCameraViewSelect'].forEach((id) => {
-        const sel = document.getElementById(id);
-        if (sel) sel.value = String(chosen);
-    });
-    syncCameraPillsUI();
-}
-
-document.querySelectorAll('[data-camera-pill]').forEach((pill) => {
-    pill.addEventListener('click', () => {
-        setCameraView(parseInt(pill.getAttribute('data-camera-pill'), 10));
-    });
-});
-
-['cameraViewSelect', 'compactCameraViewSelect'].forEach((id) => {
-    const sel = document.getElementById(id);
-    if (sel) {
-        sel.addEventListener('change', (e) => setCameraView(parseInt(e.target.value, 10)));
-    }
-});
-
 function setSimAutoFollow(checked) {
     state.simAutoJitter = Boolean(checked);
     ['simAutoFollowCheck', 'gameSimAutoFollowCheck'].forEach((id) => {
@@ -140,7 +98,6 @@ function setSimAutoFollow(checked) {
         const readout = document.getElementById('simWattReadout');
         if (slider) slider.value = targetW;
         if (readout) readout.textContent = `${targetW} W`;
-        syncLiveFlightSpeed();
         updateLiveHud();
     }
 }
@@ -201,12 +158,6 @@ window.addEventListener('keydown', (e) => {
         setScreen('pairing');
         return;
     }
-    const cameraKeyMatch = /^(?:Digit|Numpad)([1-5])$/.exec(e.code);
-    if (cameraKeyMatch && !e.ctrlKey && !e.altKey && !e.metaKey && (state.currentScreen === 'game' || state.currentScreen === 'avatar')) {
-        e.preventDefault();
-        setCameraView(parseInt(cameraKeyMatch[1], 10));
-        return;
-    }
     if (state.currentScreen !== 'game') return;
     if (e.code === 'Space') {
         e.preventDefault();
@@ -230,7 +181,6 @@ window.addEventListener('keydown', (e) => {
         state.actualWatts = newWatts;
         slider.value = newWatts;
         document.getElementById('simWattReadout').textContent = `${newWatts} W`;
-        syncLiveFlightSpeed();
         updateLiveHud();
     }
 });
@@ -282,10 +232,6 @@ const bleRoles = {
     cadence: {
         sensor: bleCadenceSensor, buttonId: 'connectCadenceBleBtn', idleLabel: 'Pair Cadence',
         errorMsg: 'Could not connect to BLE Cadence Sensor.'
-    },
-    speed: {
-        sensor: bleSpeedSensor, buttonId: 'connectSpeedBleBtn', idleLabel: 'Pair Speed',
-        errorMsg: 'Could not connect to BLE Speed Sensor.'
     },
     steer: {
         sensor: bleSteeringSensor, buttonId: 'connectSteerBleBtn', idleLabel: 'Pair Sterzo / Rizer',
@@ -516,7 +462,6 @@ function regenerateSessionWindProfile() {
         document.getElementById('simWattSlider').value = targetW;
         document.getElementById('simWattReadout').textContent = `${targetW} W`;
     }
-    syncLiveFlightSpeed();
     if (dragon3D) {
         dragon3D.refreshCanyonElevationProfile();
     }
@@ -547,7 +492,6 @@ document.getElementById('simWattSlider').addEventListener('input', (e) => {
     setSimAutoFollow(false);
     state.actualWatts = parseInt(e.target.value, 10) || 0;
     document.getElementById('simWattReadout').textContent = `${state.actualWatts} W`;
-    syncLiveFlightSpeed();
     updateLiveHud();
 });
 
@@ -556,7 +500,6 @@ document.getElementById('simSnapTargetBtn').addEventListener('click', () => {
     state.actualWatts = targetW;
     document.getElementById('simWattSlider').value = targetW;
     document.getElementById('simWattReadout').textContent = `${targetW} W`;
-    syncLiveFlightSpeed();
     updateLiveHud();
 });
 
@@ -673,19 +616,6 @@ document.getElementById('ghostFileInput').addEventListener('change', (e) => {
 
 document.getElementById('clearGhostBtn').addEventListener('click', clearGhostRide);
 document.getElementById('saveGhostBtn').addEventListener('click', downloadGhostRide);
-
-document.getElementById('startWorkoutBtn').addEventListener('click', () => {
-    soundEngine.init();
-    startOrPauseWorkout();
-});
-
-const compactPauseResumeBtnEl = document.getElementById('compactPauseResumeBtn');
-if (compactPauseResumeBtnEl) {
-    compactPauseResumeBtnEl.addEventListener('click', () => {
-        soundEngine.init();
-        startOrPauseWorkout();
-    });
-}
 
 function updateScreenshotButtonsUI(justCaptured = false) {
     const hasScreenshot = Boolean(state.preparedScreenshotDataUrl);
@@ -1017,9 +947,7 @@ if (compactFinishWorkoutBtnEl) {
 }
 
 document.getElementById('compactShowSettingsBtn').addEventListener('click', () => {
-    if (state.isRunning) {
-        startOrPauseWorkout();
-    }
+    pauseFlight();
     setScreen('pairing');
 });
 
@@ -1057,11 +985,7 @@ document.getElementById('backToTrainingBtn').addEventListener('click', () => {
     setScreen('training');
 });
 document.getElementById('avatarStartFlightBtn').addEventListener('click', () => {
-    soundEngine.init();
     setScreen('game');
-    if (!state.isRunning) {
-        startOrPauseWorkout();
-    }
 });
 
 document.getElementById('timelineCanvas').addEventListener('click', (e) => {
@@ -1119,9 +1043,7 @@ document.getElementById('summaryChangeTrainingBtn').addEventListener('click', ()
 });
 document.getElementById('summaryFlyAgainBtn').addEventListener('click', () => {
     resetWorkoutSession();
-    soundEngine.init();
     setScreen('game');
-    startOrPauseWorkout();
 });
 
 // Initialize stored FTP, default workout, Three.js 3D Dragon Engine, 1Hz game loop & 60fps render loop
@@ -1140,7 +1062,6 @@ document.getElementById('summaryFlyAgainBtn').addEventListener('click', () => {
         setAvatarType('aero_wyvern');
     }
     const savedFtp = parseInt(localStorage.getItem('loop_kicker_journey_ftp'), 10);
-    setCameraView(parseInt(localStorage.getItem('loop_kicker_journey_camera_view'), 10) || 1);
     if (!isNaN(savedFtp) && savedFtp >= 50 && savedFtp <= 600) {
         state.ftp = savedFtp;
         document.getElementById('ftpInput').value = savedFtp;

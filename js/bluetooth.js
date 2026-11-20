@@ -1,5 +1,5 @@
 // =========================================================================
-// 4. WEB BLUETOOTH CONTROLLERS: WAHOO KICKR (CPS + FTMS), HRM (0x180D) & CSC SPEED/CADENCE (0x1816)
+// 4. WEB BLUETOOTH CONTROLLERS: WAHOO KICKR (CPS + FTMS), HRM (0x180D) & CSC CADENCE (0x1816)
 // =========================================================================
 const BLE_UUIDS = {
     CYCLING_POWER_SERVICE: 0x1818,
@@ -27,7 +27,6 @@ const BLE_UUIDS = {
     C2_ADDITIONAL_STROKE_DATA_CHAR: 'ce060036-43e5-11e4-916c-0800200c9a66'
 };
 
-const DEFAULT_WHEEL_CIRCUMFERENCE_METERS = 2.105; // 700x25c road wheel circumference in meters
 const KICKR_POLL_INTERVAL_MS = 250;
 const DRAGON_POWER_AVG_WINDOW_MS = 3000;
 const ELITE_STEER_DEADZONE_DEG = 1.2;
@@ -100,21 +99,16 @@ class BleHeartRateMonitor {
     }
 }
 
-class BleCyclingSpeedCadenceSensor {
-    constructor(sensorRole, onMeasurementCallback, onStatusCallback) {
-        this.sensorRole = sensorRole; // 'cadence' or 'speed'
+class BleCadenceSensor {
+    constructor(onMeasurementCallback, onStatusCallback) {
         this.onMeasurement = onMeasurementCallback;
         this.onStatus = onStatusCallback;
         this.device = null;
         this.server = null;
         this.cscChar = null;
-        this.prevWheelRevs = null;
-        this.prevWheelTime = null;
         this.prevCrankRevs = null;
         this.prevCrankTime = null;
         this.latestCadence = null;
-        this.latestSpeedKmh = null;
-        this.wheelCircumferenceMeters = DEFAULT_WHEEL_CIRCUMFERENCE_METERS;
         this.connected = false;
     }
 
@@ -123,15 +117,13 @@ class BleCyclingSpeedCadenceSensor {
             throw new Error('Web Bluetooth is not supported in this browser. Use Chrome/Edge.');
         }
 
-        const roleLabel = this.sensorRole === 'speed' ? 'Speed' : 'Cadence';
-        this.onStatus('connecting', `Pairing ${roleLabel}...`);
+        this.onStatus('connecting', 'Pairing Cadence...');
         this.device = knownDevice || await navigator.bluetooth.requestDevice({
             filters: [
                 { services: [BLE_UUIDS.CSC_SERVICE] },
                 { namePrefix: 'Garmin' },
                 { namePrefix: 'Wahoo' },
                 { namePrefix: 'CADENCE' },
-                { namePrefix: 'SPEED' },
                 { namePrefix: 'RPM' }
             ],
             optionalServices: [BLE_UUIDS.CSC_SERVICE]
@@ -140,11 +132,9 @@ class BleCyclingSpeedCadenceSensor {
         this.device.addEventListener('gattserverdisconnected', () => {
             this.connected = false;
             this.cscChar = null;
-            this.prevWheelRevs = null;
-            this.prevWheelTime = null;
             this.prevCrankRevs = null;
             this.prevCrankTime = null;
-            this.onStatus('disconnected', `Pair ${roleLabel}`);
+            this.onStatus('disconnected', 'Pair Cadence');
         });
 
         this.server = await this.device.gatt.connect();
@@ -156,7 +146,7 @@ class BleCyclingSpeedCadenceSensor {
         });
 
         this.connected = true;
-        this.onStatus('connected', this.device.name || `${roleLabel} Sensor`);
+        this.onStatus('connected', this.device.name || 'Cadence Sensor');
     }
 
     parseCscMeasurement(dataView) {
@@ -164,32 +154,13 @@ class BleCyclingSpeedCadenceSensor {
         const flags = dataView.getUint8(0);
         const hasWheelData = (flags & 0x01) !== 0;
         const hasCrankData = (flags & 0x02) !== 0;
-        let offset = 1;
-        let speedKmh = null;
+        // Wheel revolution data (6 bytes) precedes the crank data and is skipped
+        const offset = 1 + (hasWheelData ? 6 : 0);
         let cadence = null;
-
-        if (hasWheelData && dataView.byteLength >= offset + 6) {
-            const wheelRevs = dataView.getUint32(offset, true);
-            const wheelTime = dataView.getUint16(offset + 4, true);
-            offset += 6;
-            if (this.prevWheelRevs !== null && this.prevWheelTime !== null) {
-                const revDiff = (wheelRevs - this.prevWheelRevs) >>> 0;
-                const timeDiff = (wheelTime - this.prevWheelTime + 65536) % 65536;
-                if (timeDiff > 0 && revDiff < 50) {
-                    const speedMps = (revDiff * this.wheelCircumferenceMeters * 1024) / timeDiff;
-                    speedKmh = Math.max(0, +(speedMps * 3.6).toFixed(1));
-                } else if (revDiff === 0 && timeDiff > 2048) {
-                    speedKmh = 0;
-                }
-            }
-            this.prevWheelRevs = wheelRevs;
-            this.prevWheelTime = wheelTime;
-        }
 
         if (hasCrankData && dataView.byteLength >= offset + 4) {
             const crankRevs = dataView.getUint16(offset, true);
             const crankTime = dataView.getUint16(offset + 2, true);
-            offset += 4;
             if (this.prevCrankRevs !== null && this.prevCrankTime !== null) {
                 const revDiff = (crankRevs - this.prevCrankRevs + 65536) % 65536;
                 const timeDiff = (crankTime - this.prevCrankTime + 65536) % 65536;
@@ -203,9 +174,8 @@ class BleCyclingSpeedCadenceSensor {
             this.prevCrankTime = crankTime;
         }
 
-        if (speedKmh !== null) this.latestSpeedKmh = speedKmh;
         if (cadence !== null) this.latestCadence = cadence;
-        this.onMeasurement({ speedKmh, cadence });
+        this.onMeasurement({ cadence });
     }
 }
 
@@ -547,7 +517,6 @@ class BleConcept2Rower {
         this.strokeChar = null;
         this.latestWatts = null;
         this.latestStrokeRate = null;
-        this.latestSpeedKmh = null;
         this.latestHeartRate = null;
         this.lastStrokePowerAt = -Infinity;
         this.connected = false;
@@ -573,7 +542,6 @@ class BleConcept2Rower {
             this.strokeChar = null;
             this.latestWatts = null;
             this.latestStrokeRate = null;
-            this.latestSpeedKmh = null;
             this.latestHeartRate = null;
             this.onStatus('disconnected', 'Connect Concept2');
         });
@@ -616,7 +584,6 @@ class BleConcept2Rower {
         const speedMps = dataView.getUint16(3, true) / 1000.0;
         const strokeRate = dataView.getUint8(5);
         const heartRate = dataView.getUint8(6);
-        this.latestSpeedKmh = speedMps * 3.6;
         this.latestStrokeRate = strokeRate;
         this.latestHeartRate = (heartRate > 0 && heartRate < 255) ? heartRate : null;
         // Stroke power only updates once per stroke; when strokes stop, derive power from
@@ -639,7 +606,6 @@ class BleConcept2Rower {
         this.onTelemetry({
             watts: this.latestWatts,
             cadence: this.latestStrokeRate,
-            speedKmh: this.latestSpeedKmh,
             heartRate: this.latestHeartRate
         });
     }
@@ -661,7 +627,6 @@ class WahooKickrBluetooth {
         this.lastSentGradePct = null;
         this.latestWatts = null;
         this.latestCadence = null;
-        this.latestSpeedKmh = null;
         this.pollIntervalId = null;
         this.isPollingRead = false;
         this.connected = false;
@@ -785,8 +750,7 @@ class WahooKickrBluetooth {
                 } else if (this.latestWatts !== null) {
                     this.onTelemetry({
                         watts: this.latestWatts,
-                        cadence: this.latestCadence,
-                        speedKmh: this.latestSpeedKmh
+                        cadence: this.latestCadence
                     });
                 }
             }
@@ -821,7 +785,7 @@ class WahooKickrBluetooth {
         this.latestWatts = watts;
         if (cadence !== null) this.latestCadence = cadence;
         if (emitTelemetry) {
-            this.onTelemetry({ watts: this.latestWatts, cadence: this.latestCadence, speedKmh: this.latestSpeedKmh });
+            this.onTelemetry({ watts: this.latestWatts, cadence: this.latestCadence });
         }
     }
 
@@ -829,11 +793,8 @@ class WahooKickrBluetooth {
         if (!dataView || dataView.byteLength < 4) return;
         const flags = dataView.getUint16(0, true);
         let offset = 2;
-        let speedKmh = null;
-        if ((flags & 0x0001) === 0 && dataView.byteLength >= offset + 2) {
-            speedKmh = dataView.getUint16(offset, true) / 100.0;
-            offset += 2;
-        }
+        // Instantaneous speed is present when the "More Data" bit is 0; skip it
+        if ((flags & 0x0001) === 0) offset += 2;
         if (flags & 0x0002) offset += 2;
         let cadence = null;
         if ((flags & 0x0004) && dataView.byteLength >= offset + 2) {
@@ -849,9 +810,8 @@ class WahooKickrBluetooth {
         }
         if (watts !== null) this.latestWatts = watts;
         if (cadence !== null) this.latestCadence = cadence;
-        if (speedKmh !== null) this.latestSpeedKmh = speedKmh;
         if (emitTelemetry) {
-            this.onTelemetry({ watts: this.latestWatts, cadence: this.latestCadence, speedKmh: this.latestSpeedKmh });
+            this.onTelemetry({ watts: this.latestWatts, cadence: this.latestCadence });
         }
     }
 

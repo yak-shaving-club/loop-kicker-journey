@@ -10,7 +10,7 @@ covering every screen/state:
 - 06-summary.png     (Post-flight Workout Summary: #summaryModal)
 
 Requirements enforced for all avatar flight screenshots:
-- "START FLIGHT" (#avatarStartFlightBtn / #startWorkoutBtn) has been clicked and workout is actively flying
+- "START FLIGHT" (#avatarStartFlightBtn) has been clicked and the workout is actively flying
 - Forward velocity is temporarily set to zero so no forward movement happens and images are taken before any gate is reached
 - "Auto-Fly Target Gate" (#simAutoFollowCheck) is checked
 - "Steering" (#steeringToggleCheck) is turned OFF (unchecked -> "Steering: OFF (Auto-Fly Gates)")
@@ -195,7 +195,6 @@ def configure_flight_controls(
     cdp: CDPClient,
     *,
     avatar: str,
-    camera: str,
     resistance: str,
     ensure_started: bool,
     freeze_forward_velocity: bool = False,
@@ -217,7 +216,7 @@ def configure_flight_controls(
             autoFollow.dispatchEvent(new Event('change', {{ bubbles: true }}));
         }}
 
-        // 3. Select avatar, camera view, and resistance mode
+        // 3. Select avatar and resistance mode
         const setSelect = (id, val) => {{
             const el = document.getElementById(id);
             if (el && el.value !== val) {{
@@ -226,30 +225,24 @@ def configure_flight_controls(
             }}
         }};
         setSelect('avatarSelect', {json.dumps(avatar)});
-        setSelect('cameraViewSelect', {json.dumps(camera)});
         setSelect('resistanceModeSelect', {json.dumps(resistance)});
 
         // 4. Ensure START FLIGHT was clicked when required
-        const startBtn = document.getElementById('startWorkoutBtn');
         if ({'true' if ensure_started else 'false'}) {{
             const avatarStartBtn = document.getElementById('avatarStartFlightBtn');
             if (typeof state !== 'undefined' && state.currentScreen === 'avatar' && !state.isRunning && avatarStartBtn) {{
                 avatarStartBtn.click();
-            }} else {{
-                const upperText = (startBtn?.textContent || '').toUpperCase();
-                if (startBtn && (upperText.includes('START FLIGHT') || upperText.includes('RESUME FLIGHT'))) {{
-                    startBtn.click();
-                }}
+            }} else if (typeof state !== 'undefined' && !state.isRunning) {{
+                startFlight();
             }}
         }}
 
-        // Seed live simulator telemetry immediately so short sleep durations still show active watts/cadence/speed
+        // Seed live simulator telemetry immediately so short sleep durations still show active watts/cadence
         if (typeof state !== 'undefined' && state.workout) {{
             const targetW = getTargetWattsAtSecond(state.workout, state.elapsedSec, state.ftp);
             if (state.isRunning && state.simMode && state.simAutoJitter) {{
                 state.actualWatts = Math.max(0, targetW);
                 state.cadence = 88;
-                state.speedKmh = estimateSpeedMpsFromWatts(state.actualWatts) * 3.6;
                 const slider = document.getElementById('simWattSlider');
                 if (slider) slider.value = state.actualWatts;
                 const readout = document.getElementById('simWattReadout');
@@ -307,7 +300,7 @@ def configure_flight_controls(
                 }}
             }}
 
-            // Snap vertical altitude and camera blend immediately so short sleeps produce fully settled frames
+            // Snap vertical altitude and camera immediately so short sleeps produce fully settled frames
             if (typeof state !== 'undefined' && state.workout) {{
                 const targetW = getTargetWattsAtSecond(state.workout, state.elapsedSec, state.ftp);
                 const effW = (state.currentScreen === 'avatar' && !state.isRunning && state.actualWatts <= 0)
@@ -319,9 +312,6 @@ def configure_flight_controls(
                 dragon3D.dragonVelocityY = 0;
                 dragon3D.cameraCurrentY = effSkyY + 2.2;
                 dragon3D.cameraLookTargetY = targetSkyY * 0.50 + effSkyY * 0.50;
-                dragon3D.cameraViewApplied = undefined;
-                dragon3D.cameraBlendPos = [0, 0, 0];
-                dragon3D.cameraBlendLook = [0, 0, 0];
             }}
         }}
 
@@ -338,9 +328,8 @@ def configure_flight_controls(
             steeringChecked: steering ? steering.checked : null,
             steeringLabel: document.getElementById('steeringToggleLabel')?.textContent?.trim(),
             autoFollowChecked: autoFollow ? autoFollow.checked : null,
-            startBtnText: startBtn ? startBtn.textContent.trim().toUpperCase() : null,
+            isRunning: typeof state !== 'undefined' ? state.isRunning : null,
             avatar: document.getElementById('avatarSelect')?.value,
-            camera: document.getElementById('cameraViewSelect')?.value,
             resistance: document.getElementById('resistanceModeSelect')?.value,
             flightZ: typeof dragon3D !== 'undefined' && dragon3D ? dragon3D.flightZ : null,
             nearestGateZ,
@@ -356,8 +345,8 @@ def configure_flight_controls(
         raise RuntimeError(f"Expected steeringChecked=False, got {state}")
     if state.get("autoFollowChecked") is not True:
         raise RuntimeError(f"Expected autoFollowChecked=True, got {state}")
-    if ensure_started and state.get("startBtnText") != "PAUSE FLIGHT":
-        raise RuntimeError(f"Expected active flight ('PAUSE FLIGHT'), got {state}")
+    if ensure_started and state.get("isRunning") is not True:
+        raise RuntimeError(f"Expected active flight (state.isRunning), got {state}")
     if freeze_forward_velocity:
         if state.get("flightZ") != 0:
             raise RuntimeError(f"Expected flightZ=0 (zero forward velocity), got {state}")
@@ -494,7 +483,6 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            camera="1",
             resistance="easy",
             ensure_started=False,
             expected_screen="splash",
@@ -508,7 +496,6 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            camera="1",
             resistance="easy",
             ensure_started=False,
             expected_screen="pairing",
@@ -522,7 +509,6 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            camera="1",
             resistance="easy",
             ensure_started=False,
             expected_screen="training",
@@ -536,7 +522,6 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            camera="1",
             resistance="easy",
             ensure_started=False,
             expected_screen="avatar",
@@ -549,7 +534,6 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            camera="1",
             resistance="easy",
             ensure_started=True,
             freeze_forward_velocity=True,
@@ -558,7 +542,7 @@ def main():
         time.sleep(0.05)
         cdp.screenshot(out_dir / "02-flight.png")
 
-        # 6. 03-delorean.png: Active flight, zero forward velocity, advance to higher-watt segment, DeLorean, Chase cam
+        # 6. 03-delorean.png: Active flight, zero forward velocity, advance to higher-watt segment, DeLorean
         print("Capturing 03-delorean.png...")
         cdp.evaluate(
             """
@@ -588,7 +572,6 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="delorean",
-            camera="1",
             resistance="medium",
             ensure_started=True,
             freeze_forward_velocity=True,
@@ -597,12 +580,11 @@ def main():
         time.sleep(0.05)
         cdp.screenshot(out_dir / "03-delorean.png")
 
-        # 7. 04-ufo.png: Active flight, zero forward velocity, Mars Attacks UFO, Chase cam
+        # 7. 04-ufo.png: Active flight, zero forward velocity, Mars Attacks UFO
         print("Capturing 04-ufo.png...")
         configure_flight_controls(
             cdp,
             avatar="mars_ufo",
-            camera="1",
             resistance="medium",
             ensure_started=True,
             freeze_forward_velocity=True,
@@ -611,40 +593,11 @@ def main():
         time.sleep(0.05)
         cdp.screenshot(out_dir / "04-ufo.png")
 
-        # 8. 04-ufo-topdown.png: Active flight, zero forward velocity, Mars Attacks UFO, Top-Down cam (3)
-        print("Capturing 04-ufo-topdown.png...")
-        configure_flight_controls(
-            cdp,
-            avatar="mars_ufo",
-            camera="3",
-            resistance="medium",
-            ensure_started=True,
-            freeze_forward_velocity=True,
-            expected_screen="game",
-        )
-        time.sleep(0.05)
-        cdp.screenshot(out_dir / "04-ufo-topdown.png")
-
-        # 9. 05-front.png: Active flight, zero forward velocity, Sky Dragon (Wyvern), Front cam (4)
-        print("Capturing 05-front.png...")
-        configure_flight_controls(
-            cdp,
-            avatar="aero_wyvern",
-            camera="4",
-            resistance="easy",
-            ensure_started=True,
-            freeze_forward_velocity=True,
-            expected_screen="game",
-        )
-        time.sleep(0.05)
-        cdp.screenshot(out_dir / "05-front.png")
-
-        # 10. 05-fuchur.png: Active flight, zero forward velocity, Fuchur (Luckdragon), Chase cam (1)
+        # 8. 05-fuchur.png: Active flight, zero forward velocity, Fuchur (Luckdragon)
         print("Capturing 05-fuchur.png...")
         configure_flight_controls(
             cdp,
             avatar="fuchur",
-            camera="1",
             resistance="easy",
             ensure_started=True,
             freeze_forward_velocity=True,
@@ -653,12 +606,11 @@ def main():
         time.sleep(0.05)
         cdp.screenshot(out_dir / "05-fuchur.png")
 
-        # 11. 05-paramotor.png: Active flight, zero forward velocity, Paramotor (Phi Maestro Light 3), Chase cam (1)
+        # 9. 05-paramotor.png: Active flight, zero forward velocity, Paramotor (Phi Maestro Light 3)
         print("Capturing 05-paramotor.png...")
         configure_flight_controls(
             cdp,
             avatar="paramotor",
-            camera="1",
             resistance="easy",
             ensure_started=True,
             freeze_forward_velocity=True,
@@ -671,7 +623,6 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="paramotor",
-            camera="1",
             resistance="easy",
             ensure_started=True,
             freeze_forward_velocity=False,
@@ -689,7 +640,7 @@ def main():
             """
         )
 
-        # 12. 06-summary.png: Click Finish (#finishWorkoutBtn) after active flight (#summaryModal)
+        # 10. 06-summary.png: Click Finish (#finishWorkoutBtn) after active flight (#summaryModal)
         print("Capturing 06-summary.png (summary screen)...")
         cdp.evaluate("document.getElementById('finishWorkoutBtn')?.click()")
         time.sleep(0.05)

@@ -100,11 +100,9 @@ function buildTrainingFitFile(sessionSummary, recordedSamples) {
     }
 
     function writeRecordDef() {
-        pushU8(0x40 | 1); pushU8(0); pushU8(0); pushU16(20); pushU8(6);
+        pushU8(0x40 | 1); pushU8(0); pushU8(0); pushU16(20); pushU8(4);
         pushU8(253); pushU8(4); pushU8(0x86);
-        pushU8(5); pushU8(4); pushU8(0x86);
         pushU8(7); pushU8(2); pushU8(0x84);
-        pushU8(6); pushU8(2); pushU8(0x84);
         pushU8(4); pushU8(1); pushU8(0x02);
         pushU8(3); pushU8(1); pushU8(0x02); // heart_rate (3, uint8, 0x02, bpm)
     }
@@ -116,12 +114,11 @@ function buildTrainingFitFile(sessionSummary, recordedSamples) {
     }
 
     function writeLapMsg() {
-        pushU8(0x40 | 2); pushU8(0); pushU8(0); pushU16(19); pushU8(12);
+        pushU8(0x40 | 2); pushU8(0); pushU8(0); pushU16(19); pushU8(11);
         pushU8(253); pushU8(4); pushU8(0x86);
         pushU8(2);   pushU8(4); pushU8(0x86);
         pushU8(7);   pushU8(4); pushU8(0x86);
         pushU8(8);   pushU8(4); pushU8(0x86);
-        pushU8(9);   pushU8(4); pushU8(0x86);
         pushU8(19);  pushU8(2); pushU8(0x84);
         pushU8(20);  pushU8(2); pushU8(0x84);
         pushU8(17);  pushU8(1); pushU8(0x02);
@@ -135,7 +132,6 @@ function buildTrainingFitFile(sessionSummary, recordedSamples) {
         pushU32(startFitTs);
         pushU32(Math.round(sessionSummary.durationSec * 1000));
         pushU32(Math.round(sessionSummary.durationSec * 1000));
-        pushU32(Math.round(sessionSummary.totalDistanceMeters * 100));
         pushU16(Math.round(sessionSummary.avgWatts));
         pushU16(Math.round(sessionSummary.maxWatts));
         pushU8(Math.round(sessionSummary.avgCadence));
@@ -146,12 +142,11 @@ function buildTrainingFitFile(sessionSummary, recordedSamples) {
     }
 
     function writeSessionMsg() {
-        pushU8(0x40 | 3); pushU8(0); pushU8(0); pushU16(18); pushU8(22);
+        pushU8(0x40 | 3); pushU8(0); pushU8(0); pushU16(18); pushU8(21);
         pushU8(253); pushU8(4); pushU8(0x86); // timestamp
         pushU8(2);   pushU8(4); pushU8(0x86); // start_time
         pushU8(7);   pushU8(4); pushU8(0x86); // total_elapsed_time (ms)
         pushU8(8);   pushU8(4); pushU8(0x86); // total_timer_time (ms)
-        pushU8(9);   pushU8(4); pushU8(0x86); // total_distance (cm)
         pushU8(48);  pushU8(4); pushU8(0x86); // total_work (J)
         pushU8(20);  pushU8(2); pushU8(0x84); // avg_power (W)
         pushU8(21);  pushU8(2); pushU8(0x84); // max_power (W)
@@ -175,7 +170,6 @@ function buildTrainingFitFile(sessionSummary, recordedSamples) {
         pushU32(startFitTs);
         pushU32(Math.round(sessionSummary.durationSec * 1000));
         pushU32(Math.round(sessionSummary.durationSec * 1000));
-        pushU32(Math.round(sessionSummary.totalDistanceMeters * 100));
         pushU32(Math.round(sessionSummary.totalWorkJoules));
         pushU16(Math.round(sessionSummary.avgWatts));
         pushU16(Math.round(sessionSummary.maxWatts));
@@ -221,9 +215,7 @@ function buildTrainingFitFile(sessionSummary, recordedSamples) {
     recordedSamples.forEach((sample) => {
         pushU8(0x01);
         pushU32(toFitTimestamp(sample.timestampMs));
-        pushU32(Math.round(sample.distanceMeters * 100));
         pushU16(Math.max(0, Math.round(sample.actualWatts)));
-        pushU16(Math.max(0, Math.round(sample.speedMps * 1000)));
         pushU8(Math.max(0, Math.min(254, Math.round(sample.cadence))));
         pushU8(toFitHeartRateByte(sample.heartRate));
     });

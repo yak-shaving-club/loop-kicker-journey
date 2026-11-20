@@ -763,7 +763,7 @@ function getBaseTargetWattsAtSecond(workout, sec, ftp) {
 
 /**
  * Canyon terrain slope only affects the physical resistance (simulation grade / incline) sent to the
- * smart trainer and the 3D canyon elevation / gate slope indicators; it does not modify target watts.
+ * smart trainer and the 3D canyon elevation; it does not modify target watts.
  */
 function getWindWattMultiplier(gradientPct) {
     return 1.0;

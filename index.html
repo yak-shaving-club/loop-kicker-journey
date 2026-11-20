@@ -1182,20 +1182,6 @@
                             </button>
                         </div>
 
-                        <!-- Speed Sensor -->
-                        <div class="flex flex-col justify-between gap-2 bg-gray-950/80 border border-gray-800 rounded-xl p-2.5">
-                            <div>
-                                <div class="text-xs font-bold text-gray-100">Speed Sensor</div>
-                                <div class="text-[11px] text-gray-400">BLE Wheel Speed</div>
-                            </div>
-                            <button id="connectSpeedBleBtn" type="button"
-                                    class="w-full px-3 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between gap-1.5 transition cursor-pointer shadow-md bg-cyan-700/80 hover:bg-cyan-600 text-white border border-cyan-400/30"
-                                    title="Pair BLE Speed Sensor">
-                                <span id="bleSpeedStatusText">Pair Speed</span>
-                                <span id="bleSpeedStatusDot" class="w-2 h-2 rounded-full bg-gray-300 shrink-0"></span>
-                            </button>
-                        </div>
-
                         <!-- Elite Sterzo / Rizer -->
                         <div class="flex flex-col justify-between gap-2 bg-gray-950/80 border border-gray-800 rounded-xl p-2.5">
                             <div>
@@ -1453,28 +1439,11 @@
          ========================================================================= -->
     <section id="screenAvatar" data-screen="avatar"
              class="hidden fixed inset-x-0 top-16 bottom-0 z-20 flex-col justify-between px-3 sm:px-5 pb-4 pt-2 pointer-events-none overflow-y-auto">
-        <!-- Top Camera Perspective Selector Over Live 3D Stage -->
+        <!-- Avatar Selection Header Over Live 3D Stage -->
         <div class="max-w-5xl w-full mx-auto bg-gray-950/80 backdrop-blur-xl border border-gray-800/90 rounded-2xl px-4 py-2.5 shadow-xl flex flex-wrap items-center justify-between gap-2.5 pointer-events-auto">
             <div>
                 <span class="text-[11px] font-black uppercase tracking-widest text-emerald-400">Step 3 of 3</span>
                 <h2 class="text-base sm:text-xl font-black text-white">Choose Your 3D Flying Avatar</h2>
-            </div>
-
-            <!-- Synced Select + Camera Perspective Buttons -->
-            <div class="flex flex-wrap items-center gap-1.5">
-                <span class="text-xs font-semibold text-gray-400 mr-1">Camera:</span>
-                <select id="cameraViewSelect" class="hidden">
-                    <option value="1">1 · Chase</option>
-                    <option value="2">2 · Far Chase</option>
-                    <option value="3">3 · Top-Down</option>
-                    <option value="4">4 · Front</option>
-                    <option value="5">5 · Front Far</option>
-                </select>
-                <button type="button" data-camera-pill="1" class="px-2.5 py-1 rounded-lg text-xs font-bold border transition cursor-pointer">1 · Chase</button>
-                <button type="button" data-camera-pill="2" class="px-2.5 py-1 rounded-lg text-xs font-bold border transition cursor-pointer">2 · Far</button>
-                <button type="button" data-camera-pill="3" class="px-2.5 py-1 rounded-lg text-xs font-bold border transition cursor-pointer">3 · Top</button>
-                <button type="button" data-camera-pill="4" class="px-2.5 py-1 rounded-lg text-xs font-bold border transition cursor-pointer">4 · Front</button>
-                <button type="button" data-camera-pill="5" class="px-2.5 py-1 rounded-lg text-xs font-bold border transition cursor-pointer">5 · Front Far</button>
             </div>
         </div>
 
@@ -1574,36 +1543,11 @@
     <div id="screenGame" data-screen="game"
          class="hidden fixed inset-0 z-20 pointer-events-none flex-col justify-between p-2.5 sm:p-4 overflow-hidden">
 
-        <!-- TOP FLOATING STACK: IN-FLIGHT BAR, SIMULATOR BAR & ARCADE SCORE HUD -->
+        <!-- TOP FLOATING STACK: IN-FLIGHT BAR (INCL. SIMULATOR CONTROLS) & ARCADE SCORE HUD -->
         <div class="flex flex-col gap-2 w-full max-w-[1600px] mx-auto pointer-events-none">
 
             <!-- Compact In-Flight Control Bar -->
             <section id="activeTrainingControlBar" class="bg-gray-950/75 backdrop-blur-md border border-gray-800/90 rounded-2xl px-3 py-1.5 shadow-lg flex flex-wrap items-center gap-2 pointer-events-auto">
-                <div class="flex items-center gap-1.5 bg-gray-900/90 border border-amber-500/40 rounded-xl px-2.5 py-1 text-xs"
-                     title="Choose your 3D flying avatar figure">
-                    <label for="compactAvatarSelect" class="text-gray-400 font-semibold">Avatar:</label>
-                    <select id="compactAvatarSelect" class="bg-gray-800 text-amber-300 font-bold rounded px-1.5 py-0.5 border border-gray-700 focus:outline-none focus:border-orange-500 cursor-pointer">
-                        <option value="aero_wyvern" class="bg-gray-900">Aero Wyvern (Realistic Flight)</option>
-                        <option value="fuchur" class="bg-gray-900">Fuchur (Unendliche Geschichte)</option>
-                        <option value="et_bike" class="bg-gray-900">Boy with Bicycle &amp; E.T.</option>
-                        <option value="delorean" class="bg-gray-900">DeLorean (Back to the Future)</option>
-                        <option value="mars_ufo" class="bg-gray-900">UFO (Mars Attacks!)</option>
-                        <option value="paramotor" class="bg-gray-900">Paramotor (Phi Maestro Light 3)</option>
-                    </select>
-                </div>
-
-                <div class="flex items-center gap-1.5 bg-gray-900/90 border border-sky-500/40 rounded-xl px-2.5 py-1 text-xs"
-                     title="Switch camera perspective — press keys 1 to 5">
-                    <label for="compactCameraViewSelect" class="text-gray-400 font-semibold">Camera:</label>
-                    <select id="compactCameraViewSelect" class="bg-gray-800 text-sky-300 font-bold rounded px-1.5 py-0.5 border border-gray-700 focus:outline-none focus:border-orange-500 cursor-pointer">
-                        <option value="1" class="bg-gray-900">1 · Chase</option>
-                        <option value="2" class="bg-gray-900">2 · Far Chase</option>
-                        <option value="3" class="bg-gray-900">3 · Top-Down</option>
-                        <option value="4" class="bg-gray-900">4 · Front</option>
-                        <option value="5" class="bg-gray-900">5 · Front Far</option>
-                    </select>
-                </div>
-
                 <button id="compactShowSettingsBtn" type="button"
                         class="px-2.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs border border-gray-700 cursor-pointer transition"
                         title="Open Pairing, Training &amp; Avatar setup screens">
@@ -1655,15 +1599,24 @@
                     <span id="ftpTestStopCountdown" class="hidden font-mono font-black text-rose-300 bg-rose-950/80 border border-rose-500/50 rounded px-1.5 py-0.5">Stop in 5s</span>
                 </div>
 
-                <!-- Flight Session Action Buttons -->
-                <button id="startWorkoutBtn" type="button"
-                        class="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-400 hover:from-emerald-400 hover:to-green-300 text-gray-950 font-black text-xs tracking-wide uppercase flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer shadow-lg shadow-emerald-500/25 transition">
-                    <svg id="startBtnIcon" class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    <span id="startBtnText">Start Flight</span>
-                </button>
+                <!-- Simulator Controls (shown when Sim Mode is ON) -->
+                <div id="simControlBar" class="flex flex-wrap items-center gap-2 flex-grow min-w-[260px] bg-gray-900/90 border border-amber-500/40 rounded-xl px-2.5 py-1"
+                     title="Virtual Dragon Power: adjust watts to climb through the high-altitude 3D Donut Gates">
+                    <span class="text-[11px] font-bold uppercase tracking-wide text-amber-300 whitespace-nowrap">Dragon Power</span>
+                    <input id="simWattSlider" type="range" min="0" max="650" value="0"
+                           class="flex-grow min-w-[90px] accent-orange-500 cursor-pointer">
+                    <span id="simWattReadout" class="text-xs font-mono font-bold text-amber-300 w-14 text-right">0 W</span>
+                    <button id="simSnapTargetBtn" type="button"
+                            class="px-2 py-0.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold whitespace-nowrap cursor-pointer transition">
+                        Lock 100% Gate Altitude
+                    </button>
+                    <label class="flex items-center gap-1.5 text-xs text-gray-300 whitespace-nowrap cursor-pointer">
+                        <input id="gameSimAutoFollowCheck" type="checkbox" class="accent-emerald-500 rounded">
+                        <span>Auto-Fly Target Gate</span>
+                    </label>
+                </div>
 
+                <!-- Flight Session Action Buttons -->
                 <button id="screenshotBtn" type="button"
                         class="px-2.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-cyan-300 font-bold text-xs flex items-center gap-1 whitespace-nowrap shrink-0 border border-cyan-500/40 transition cursor-pointer"
                         title="Capture screenshot for the finish summary screen">
@@ -1682,27 +1635,6 @@
                     <span>Finish &amp; Summary</span>
                 </button>
             </section>
-
-            <!-- Simulator Controls Banner (shown on Game screen when Sim Mode is ON) -->
-            <div id="simControlBar" class="bg-gray-950/75 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 rounded-2xl px-3.5 py-2 border border-amber-500/30 shadow-lg pointer-events-auto">
-                <div class="flex items-center gap-2 text-xs text-amber-300 font-semibold">
-                    <span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 font-bold">VIRTUAL DRAGON POWER</span>
-                    <span class="hidden sm:inline">Adjust watts to climb through the high-altitude 3D Donut Gates:</span>
-                </div>
-                <div class="flex flex-wrap items-center gap-3 flex-grow max-w-xl">
-                    <input id="simWattSlider" type="range" min="0" max="650" value="0"
-                           class="flex-grow accent-orange-500 cursor-pointer">
-                    <span id="simWattReadout" class="text-xs font-mono font-bold text-amber-300 w-14 text-right">0 W</span>
-                    <button id="simSnapTargetBtn" type="button"
-                            class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold cursor-pointer transition">
-                        Lock 100% Gate Altitude
-                    </button>
-                    <label class="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
-                        <input id="gameSimAutoFollowCheck" type="checkbox" class="accent-emerald-500 rounded">
-                        <span>Auto-Fly Target Gate</span>
-                    </label>
-                </div>
-            </div>
 
             <!-- TOP IN-GAME ARCADE HUD: CENTERED LIVE TELEMETRY (HR, WATTS, CADENCE) & UPPER RIGHT SCORE PANEL -->
             <div class="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-start gap-2 pointer-events-none">
@@ -1750,7 +1682,7 @@
                     </div>
                 </div>
 
-                <!-- Upper Right Score Panel: Points, Speed, Ghost & FTP Test -->
+                <!-- Upper Right Score Panel: Points, Ghost & FTP Test -->
                 <div id="upperRightArcadeHud"
                      class="arcade-hud-panel justify-self-end relative overflow-hidden rounded-2xl border-2 border-orange-500/50 backdrop-blur-md px-3.5 py-2.5 sm:px-4 sm:py-3 text-orange-400 font-black font-mono pointer-events-auto min-w-[200px] sm:min-w-[240px]">
                     <!-- Top Arcade Neon Accent Line -->
@@ -1768,12 +1700,6 @@
                         </div>
                         <span id="totalScoreDisplay"
                               class="text-2xl sm:text-3xl tracking-tight tabular-nums bg-gradient-to-b from-yellow-200 via-amber-300 to-orange-500 bg-clip-text text-transparent arcade-text-glow leading-none">0</span>
-                    </div>
-
-                    <!-- Secondary Speed Row -->
-                    <div class="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-orange-500/20 text-gray-400" title="Current Speed (km/h)">
-                        <span class="text-[10px] uppercase tracking-wider font-extrabold">Speed</span>
-                        <span class="text-[11px] sm:text-xs tabular-nums text-gray-300"><span id="speedDisplay">0.0</span> km/h</span>
                     </div>
 
                     <!-- Ghost Ride Comparison Row (visible only while a ghost is loaded) -->
@@ -1948,7 +1874,6 @@
                 <div class="bg-gray-800/60 border border-gray-700/80 rounded-xl px-2.5 py-2">
                     <div class="text-[10px] text-gray-400 font-semibold truncate">Duration</div>
                     <div id="summaryDuration" class="text-base sm:text-lg font-black font-mono text-white leading-tight mt-0.5">00:00</div>
-                    <div class="text-[10px] text-gray-400 truncate"><span id="summaryDistance" class="text-gray-200 font-mono">0.00</span> km</div>
                 </div>
 
                 <div class="bg-gray-800/60 border border-gray-700/80 rounded-xl px-2.5 py-2">

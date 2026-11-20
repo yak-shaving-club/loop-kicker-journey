@@ -5,14 +5,6 @@ const soundEngine = new ArcadeSoundEngine();
 const musicEngine = new AdaptiveMusicEngine(soundEngine);
 const fxEngine = new VisualEffectsEngine(document.getElementById('fxCanvas'));
 
-const CAMERA_VIEWS = {
-    1: 'Chase',
-    2: 'Far Chase',
-    3: 'Top-Down',
-    4: 'Front',
-    5: 'Front Far'
-};
-
 const FTP_TEST_STOP_THRESHOLD_SECONDS = 5;
 const DONUT_GATE_TOLERANCE_WATTS = 30;
 
@@ -22,7 +14,6 @@ const state = {
     durationFilter: 'all',
     intensityFilter: 'all',
     avatarType: 'aero_wyvern',
-    cameraView: 1,
     ftp: 200,
     donutVisualSizeBoost: 1.0,
     resistanceMode: 'easy',
@@ -49,9 +40,6 @@ const state = {
     actualWatts: 0,
     heartRate: null,
     cadence: 0,
-    rawWheelSpeedKmh: null,
-    speedKmh: 0,
-    totalDistanceMeters: 0,
 
     // Scoring, streaks & 3D counters
     totalScore: 0,
@@ -88,30 +76,29 @@ const state = {
 // Visual 3D canyon grade multiplier (amplifies wide-FOV 3D terrain steepness while keeping trainer grade & meters exact)
 const CANYON_SLOPE_VISUAL_SCALE = 5.2;
 
-// Slope-aware flight physics & dynamic 3D gate spacing constants
-const FLIGHT_AERO_DRAG_COEFF = 0.22; // W / (m/s)^3 — preserves exact flat-ground speed baseline
+// Slope-aware flight physics & 3D gate spacing constants.
+// The dragon's forward speed never depends on the rider's watts (watts only set its altitude):
+// it flies at a fixed base speed that only speeds up downhill and slows down uphill.
+const FLIGHT_AERO_DRAG_COEFF = 0.22; // W / (m/s)^3
 const FLIGHT_EFFECTIVE_MASS_KG = 65.0; // Effective dragon + rider mass for climb/descent gravitational power
 const FLIGHT_GRAVITY_MPS2 = 9.81;
+const FLIGHT_REFERENCE_WATTS = 200.0; // Fixed propulsion power that defines the flat-ground base speed
 const DEFAULT_GATE_SPACING_Z = 68.0;
 const FIRST_GATE_LEAD_Z = 60.0;
 const FIRST_GATE_LEAD_TIME_SEC = FIRST_GATE_LEAD_Z / DEFAULT_GATE_SPACING_Z;
-const BASELINE_200W_FLAT_SPEED_MPS = Math.pow(200.0 / FLIGHT_AERO_DRAG_COEFF, 1 / 3);
-const FLIGHT_WORLD_UNITS_PER_METER = DEFAULT_GATE_SPACING_Z / BASELINE_200W_FLAT_SPEED_MPS;
+const BASELINE_FLAT_SPEED_MPS = Math.pow(FLIGHT_REFERENCE_WATTS / FLIGHT_AERO_DRAG_COEFF, 1 / 3);
+const FLIGHT_WORLD_UNITS_PER_METER = DEFAULT_GATE_SPACING_Z / BASELINE_FLAT_SPEED_MPS;
 const MIN_ACTIVE_GATE_SPACING_Z = 20.0;
 const MAX_ACTIVE_GATE_SPACING_Z = 135.0;
 
 /**
- * Computes steady-state dragon flight speed (m/s) from generated power `watts` and canyon slope `gradientPct` (%).
- * Solves P_aero(v) + P_gravity(v) = watts:
- *   FLIGHT_AERO_DRAG_COEFF * v^3 + (M * g * sin(theta)) * v = watts
- * Uphill (+grade%) spends part of the watts climbing against gravity, reducing forward speed.
- * Downhill (-grade%) converts gravitational potential into forward speed, increasing speed.
- * Generating <= 0 watts yields 0 m/s (flight paused).
+ * Computes the dragon's steady-state flight speed (m/s) on canyon slope `gradientPct` (%) at FLIGHT_REFERENCE_WATTS.
+ * Solves P_aero(v) + P_gravity(v) = FLIGHT_REFERENCE_WATTS:
+ *   FLIGHT_AERO_DRAG_COEFF * v^3 + (M * g * sin(theta)) * v = FLIGHT_REFERENCE_WATTS
+ * Uphill (+grade%) reduces forward speed; downhill (-grade%) increases it.
  */
-function estimateSpeedMpsFromWatts(watts, gradientPct = state.currentGradientPct) {
-    const w = Number(watts) || 0;
-    if (w <= 0) return 0;
-
+function getFlightSpeedMpsForGrade(gradientPct = state.currentGradientPct) {
+    const w = FLIGHT_REFERENCE_WATTS;
     const pct = Number.isFinite(Number(gradientPct)) ? Number(gradientPct) : 0.0;
     const grade = pct / 100.0;
     const flatSpeedMps = Math.pow(w / FLIGHT_AERO_DRAG_COEFF, 1 / 3);
@@ -141,45 +128,13 @@ function estimateSpeedMpsFromWatts(watts, gradientPct = state.currentGradientPct
 }
 
 /**
- * Computes slope-adjusted flight speed in km/h.
- * Returns 0 km/h whenever generated watts <= 0 so flight pauses cleanly when not pedaling.
- * Scales dedicated BLE wheel-speed sensor readings by the slope speed ratio so uphill/downhill physics still apply.
+ * 3D world Z distance the dragon covers per workout second (Donut Gate spacing) on terrain `gradientPct` (%).
  */
-function computeFlightSpeedKmh(watts = state.actualWatts, gradientPct = state.currentGradientPct, rawWheelSpeedKmh = null) {
-    const w = Number(watts) || 0;
-    if (w <= 0) return 0;
-
-    if (rawWheelSpeedKmh !== null && rawWheelSpeedKmh !== undefined && Number.isFinite(Number(rawWheelSpeedKmh))) {
-        const baseWheelKmh = Math.max(0, Number(rawWheelSpeedKmh));
-        if (baseWheelKmh <= 0) return 0;
-        const refWatts = Math.max(25, w);
-        const flatMps = estimateSpeedMpsFromWatts(refWatts, 0);
-        const slopedMps = estimateSpeedMpsFromWatts(refWatts, gradientPct);
-        const slopeRatio = flatMps > 0 ? (slopedMps / flatMps) : 1.0;
-        return Math.max(0, baseWheelKmh * slopeRatio);
-    }
-
-    return estimateSpeedMpsFromWatts(w, gradientPct) * 3.6;
-}
-
-/**
- * Converts a positive forward speed (m/s) into 3D world Z distance covered per workout second (Donut Gate spacing).
- */
-function getGateSpacingZForSpeedMps(speedMps) {
-    const mps = Number(speedMps) || 0;
-    if (mps <= 0) return DEFAULT_GATE_SPACING_Z;
+function getGateSpacingZForGrade(gradientPct = 0) {
     return Math.max(
         MIN_ACTIVE_GATE_SPACING_Z,
-        Math.min(MAX_ACTIVE_GATE_SPACING_Z, mps * FLIGHT_WORLD_UNITS_PER_METER)
+        Math.min(MAX_ACTIVE_GATE_SPACING_Z, getFlightSpeedMpsForGrade(gradientPct) * FLIGHT_WORLD_UNITS_PER_METER)
     );
-}
-
-/**
- * Computes 3D Donut Gate Z spacing for active `watts` (> 0) and terrain `gradientPct` (%).
- */
-function getGateSpacingZForWattsAndGrade(watts, gradientPct = 0) {
-    const activeWatts = Math.max(1, Number(watts) || 0);
-    return getGateSpacingZForSpeedMps(estimateSpeedMpsFromWatts(activeWatts, gradientPct));
 }
 
 function generateTerrainGradientProfile(totalDurationSec, mode) {

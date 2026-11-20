@@ -19,7 +19,7 @@ No server or package installation is required. The page loads Three.js and Tailw
    - **Splashscreen:** Click **Start Setup** from the dragon hero screen. Or click **Ghost Battle** (see [Ghost rides](#ghost-battle)) to race a saved ghost ride right away.
    - **1 · Pairing & Rules:** Pair Bluetooth devices (or enable the Virtual Trainer Simulator and **Auto-Fly Target Gate**) and configure steering and 3D obstacles.
    - **2 · Training Selection:** Filter the 26 built-in presets by duration (`≤15m`, `16–30m`, `30m+`) and intensity (`Endurance`, `Sweet Spot`, `Threshold`, `VO2max / HIIT`, `FTP Test`), upload a Zwift `.zwo` file, or load a saved `.loop-kicker-journey-ghost.json` ghost ride, then set your FTP, preview expected **Avg** watts / **IF** / **TSS**, and choose a resistance/slope mode.
-   - **3 · Avatar Selection:** Choose your 3D avatar and camera view over a live sky preview, then click **Start Flight**.
+   - **3 · Avatar Selection:** Choose your 3D avatar over a live sky preview, then click **Start Flight**.
    - **4 · Flight & Summary:** Fly through the target-watt donut gates and finish to view the **Workout Summary** screen (`.fit`, `.loop-kicker-journey-ghost.json`, and `.png` export).
 
 Simulation mode is enabled by default, so you can try the game without a trainer. Bluetooth requires a compatible browser; the Web Bluetooth API is supported by browsers such as current versions of Chrome and Edge. Bluetooth is available only in a secure context (for example, `localhost` or HTTPS).
@@ -38,7 +38,7 @@ Available workouts can be filtered by duration and physiological intensity:
 - **FTP Ramp Tests:** **Standard MAP / FTP Ramp Test** (`+20 W/min` up to `580 W`) and **Lite / Finer-Step FTP Ramp Test (+10W)** (`+10 W/min` up to `560 W`) — progressive 1-minute fixed-watt ramps ridden to exhaustion, estimating FTP values past `400 W` regardless of your prior FTP setting. An active FTP Test badge is shown in the HUD, and stopping pedaling for 5 seconds automatically finishes the flight, displays your calculated FTP (`75%` of best 1-minute average power) prominently in the summary, and saves it to `localStorage` as your default FTP for future trainings.
 - **Custom Zwift workouts** in `.zwo` format
 
-Resistance modes are **Easy** (`0%` flat), **Medium** (*Rolling Hills*), **Difficult** (*Steep Canyon*), and **ERG Lock** (with a button to re-roll the session's random 3D canyon slope profile). In **Medium** and **Difficult** modes, the 3D canyon floor, river, forest, and flight path physically climb and descend along the terrain elevation profile while upcoming donut gates display animated amber **CLIMB** (`+grade`) or emerald **DESCENT** (`-grade`) 3D slope chevrons, flanking halos, and grade badges. Flying uphill spends part of your generated watts against gravity (reducing dragon speed), flying downhill boosts speed, and the 3D distance between donut gates dynamically scales with current speed while pausing flight whenever `0 W` are generated. During a flight, **Pause Flight** / **Resume Flight** pauses or resumes the workout, and **Finish & Summary** ends a workout early.
+Resistance modes are **Easy** (`0%` flat), **Medium** (*Rolling Hills*), **Difficult** (*Steep Canyon*), and **ERG Lock** (with a button to re-roll the session's random 3D canyon slope profile). In **Medium** and **Difficult** modes, the 3D canyon floor, river, forest, and flight path physically climb and descend along the terrain elevation profile. Your watts only set the dragon's altitude; its forward speed is fixed and only changes with the terrain: it flies slower uphill and faster downhill, and the 3D distance between donut gates scales with that speed. Flight pauses whenever `0 W` are generated. During a flight, **Setup** pauses the workout and returning to the flight resumes it; **Finish & Summary** ends a workout early. The avatar can only be changed in setup.
 
 ### Adaptive music
 
@@ -60,14 +60,13 @@ Transitions are smoothed so short target changes don't toggle the music. The mus
 | --- | --- |
 | `←` / `A` | Steer left |
 | `→` / `D` | Steer right |
-| `1`–`5` | Change camera view |
 | `Space` | Breathe dragon fire to fend off obstacles |
 | `↑` / `↓` | Increase/decrease power by 10 W in simulation mode |
 | `Shift` + `↑` / `↓` | Increase/decrease power by 25 W in simulation mode |
 
 You can turn off manual steering to have the avatar automatically steer through the gates. Obstacles can be enabled or disabled with the corresponding option.
 
-## Avatars and cameras
+## Avatars
 
 Available avatars:
 
@@ -78,16 +77,16 @@ Available avatars:
 - UFO
 - Paramotor (pilot with a caged propeller under a white/lilac Phi Maestro Light 3 paraglider)
 
-There are five camera views: Chase, Far Chase, Top-Down, Front, and Front Far. Your avatar, camera, FTP, steering, and accuracy settings are saved in the browser.
+The camera always follows your avatar from behind. Your avatar, FTP, steering, and accuracy settings are saved in the browser.
 
 ## Connecting trainers and sensors
 
 Use the BLE buttons to pair supported devices:
 
 - Wahoo KICKR (power and trainer control)
-- Concept2 RowErg, SkiErg, or BikeErg via the PM5 monitor (power, stroke rate shown as cadence, speed, and heart rate from a strap paired to the PM5). The PM5 cannot be controlled, so resistance modes and ERG Lock have no effect; you set the effort yourself.
+- Concept2 RowErg, SkiErg, or BikeErg via the PM5 monitor (power, stroke rate shown as cadence, and heart rate from a strap paired to the PM5). The PM5 cannot be controlled, so resistance modes and ERG Lock have no effect; you set the effort yourself.
 - Heart rate monitors
-- Cadence and speed sensors
+- Cadence sensors
 - Elite Sterzo Smart or Elite Rizer (BLE steering)
 - Mobile phone handlebar steering via QR code (WebRTC peer-to-peer): Click **Phone Steer (QR)** on the desktop to display a QR code. Scanning it on your phone opens a minimalistic mobile steering controller page (`?phone-steer=<id>`) with sensor permission handling, live angle gauge, **Calibrate Center (0°)**, axis inversion, touch test slider, and a **Dragon Fire** button—without requiring `server.js` or typing IP addresses.
 - Elite Aria Smart Fan
@@ -123,9 +122,7 @@ Without this flag, devices must be paired manually after every page load. Messag
 | Step 3 · Avatar Selection | ![3D avatar selection and sky preview](docs/screenshots/01-avatar.png) |
 | Flight | ![Flight through the 3D gates](docs/screenshots/02-flight.png) |
 | DeLorean avatar | ![DeLorean in flight](docs/screenshots/03-delorean.png) |
-| UFO, standard view | ![UFO in flight](docs/screenshots/04-ufo.png) |
-| UFO, top-down view | ![UFO from the top-down camera](docs/screenshots/04-ufo-topdown.png) |
-| Front camera | ![Front view](docs/screenshots/05-front.png) |
+| UFO avatar | ![UFO in flight](docs/screenshots/04-ufo.png) |
 | Fuchur avatar | ![Fuchur in flight](docs/screenshots/05-fuchur.png) |
 | Paramotor avatar | ![Paramotor under a Phi Maestro Light 3 wing](docs/screenshots/05-paramotor.png) |
 | Workout summary | ![Workout summary](docs/screenshots/06-summary.png) |

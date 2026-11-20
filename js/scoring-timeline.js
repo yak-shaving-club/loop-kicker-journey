@@ -64,16 +64,13 @@ function setScreen(screenName) {
     state.steerLeftPressed = false;
     state.steerRightPressed = false;
     updateHeaderAndSetupVisibility();
+    // The flight screen has no start/pause control: entering it always starts or resumes the flight
+    if (target === 'game') {
+        startFlight();
+    }
     requestAnimationFrame(() => {
         updateLiveHud();
     });
-}
-
-function syncLiveFlightSpeed(gradientPct = state.currentGradientPct) {
-    const hasSpeedSensor = typeof bleSpeedSensor !== 'undefined' && bleSpeedSensor.connected;
-    const rawWheelKmh = hasSpeedSensor ? state.rawWheelSpeedKmh : null;
-    state.speedKmh = computeFlightSpeedKmh(state.actualWatts, gradientPct, rawWheelKmh);
-    return state.speedKmh;
 }
 
 function recordKickrWattReading(watts, nowMs = performance.now()) {
@@ -157,14 +154,10 @@ const bleEliteAriaFan = new BleEliteAriaFan(
     }
 );
 
-const bleCadenceSensor = new BleCyclingSpeedCadenceSensor(
-    'cadence',
+const bleCadenceSensor = new BleCadenceSensor(
     (measurement) => {
         if (measurement.cadence !== null && measurement.cadence !== undefined) {
             state.cadence = Math.max(0, Math.round(measurement.cadence));
-        }
-        if (!bleSpeedSensor.connected && measurement.speedKmh !== null && measurement.speedKmh !== undefined) {
-            state.speedKmh = computeFlightSpeedKmh(state.actualWatts, state.currentGradientPct, measurement.speedKmh);
         }
         updateLiveHud();
     },
@@ -181,36 +174,6 @@ const bleCadenceSensor = new BleCyclingSpeedCadenceSensor(
             dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse';
         } else {
             btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-emerald-700/80 hover:bg-emerald-600 text-white border border-emerald-400/30';
-            dot.className = 'w-2 h-2 rounded-full bg-gray-300';
-        }
-    }
-);
-
-const bleSpeedSensor = new BleCyclingSpeedCadenceSensor(
-    'speed',
-    (measurement) => {
-        if (measurement.speedKmh !== null && measurement.speedKmh !== undefined) {
-            state.rawWheelSpeedKmh = Math.max(0, measurement.speedKmh);
-            syncLiveFlightSpeed();
-        }
-        if (!bleCadenceSensor.connected && measurement.cadence !== null && measurement.cadence !== undefined) {
-            state.cadence = Math.max(0, Math.round(measurement.cadence));
-        }
-        updateLiveHud();
-    },
-    (status, label) => {
-        const btn = document.getElementById('connectSpeedBleBtn');
-        const text = document.getElementById('bleSpeedStatusText');
-        const dot = document.getElementById('bleSpeedStatusDot');
-        if (text) text.textContent = label;
-        if (!btn || !dot) return;
-        if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-emerald-200 animate-ping';
-        } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse';
-        } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-cyan-700/80 hover:bg-cyan-600 text-white border border-cyan-400/30';
             dot.className = 'w-2 h-2 rounded-full bg-gray-300';
         }
     }
@@ -315,7 +278,6 @@ const bleTrainer = new WahooKickrBluetooth(
                 state.cadence = 85;
             }
         }
-        syncLiveFlightSpeed();
         updateLiveHud();
     },
     (status, label) => {
@@ -343,7 +305,6 @@ const bleRower = new BleConcept2Rower(
         if (!bleCadenceSensor.connected && telemetry.cadence !== null && telemetry.cadence !== undefined) {
             state.cadence = Math.max(0, Math.round(telemetry.cadence));
         }
-        syncLiveFlightSpeed();
         const rowerHeartRate = telemetry.heartRate || null;
         if (!bleHrmSensor.connected && rowerHeartRate !== state.heartRate) {
             state.heartRate = rowerHeartRate;
