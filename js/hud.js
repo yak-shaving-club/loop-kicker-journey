@@ -630,6 +630,9 @@ function resetWorkoutSession() {
 
 function finishWorkoutAndShowSummary() {
     const wasAutoStoppedFtpTest = state.ftpTestAutoStopped;
+    // Rides finished early via the Finish button are not ranked; an FTP test always ends early
+    const isRankedRide = Boolean(state.workout)
+        && (state.workout.isFtpTest || state.elapsedSec >= state.workout.totalDuration);
     state.isRunning = false;
     state.hasStartedSession = false;
     state.forceShowSetupDuringTraining = false;
@@ -759,6 +762,8 @@ function finishWorkoutAndShowSummary() {
     const ghostResultEl = document.getElementById('summaryGhostResult');
     ghostResultEl.textContent = getGhostRaceResultText();
     ghostResultEl.classList.toggle('hidden', !state.ghost);
+
+    prepareRideSaveForm(isRankedRide);
 
     syncSummaryScreenshotDialogUI();
     setScreen('summary');

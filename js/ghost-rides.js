@@ -10,11 +10,24 @@ const GHOST_RESISTANCE_MODES = new Set(['easy', 'medium', 'difficult', 'erg']);
 // Only these modes generate a random wind course; easy/erg are always flat
 const GHOST_WIND_COURSE_MODES = new Set(['medium', 'difficult']);
 
+// Identifies the selected workout for highscores: the preset key, or a hash of a custom .zwo workout
+function getWorkoutKey() {
+    if (state.selectedPresetKey && PRESET_WORKOUTS[state.selectedPresetKey] === state.workoutXml) {
+        return state.selectedPresetKey;
+    }
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < state.workoutXml.length; i++) {
+        hash = Math.imul(hash ^ state.workoutXml.charCodeAt(i), 0x01000193);
+    }
+    return `zwo-${(hash >>> 0).toString(16).padStart(8, '0')}`;
+}
+
 function buildGhostRideFile() {
     return {
         format: GHOST_FILE_FORMAT,
         version: GHOST_FILE_VERSION,
         recordedAt: new Date(state.lastSummary.startTimeMs || Date.now()).toISOString(),
+        workoutKey: getWorkoutKey(),
         workoutName: state.workout.name,
         workoutXml: state.workoutXml,
         ftp: state.ftp,
@@ -261,12 +274,33 @@ function setGhostBattleStatus(text, isError = false) {
     statusEl.className = `text-xs mt-3 ${isError ? 'text-rose-300' : 'text-gray-400'}`;
 }
 
+const GHOST_LEADERBOARD_SIZE = 3;
+const GHOST_RANK_MEDALS = ['🥇', '🥈', '🥉'];
+
+// Best GHOST_LEADERBOARD_SIZE ghost rides per workout + terrain, groups ordered by workout name
+function buildGhostLeaderboards(rides) {
+    const groups = new Map();
+    rides.forEach((ride) => {
+        const key = `${ride.workoutKey || ride.workoutName}|${ride.resistanceMode || ''}`;
+        if (!groups.has(key)) groups.set(key, { workoutName: ride.workoutName, resistanceMode: ride.resistanceMode, rides: [] });
+        groups.get(key).rides.push(ride);
+    });
+    return [...groups.values()]
+        .map((group) => ({
+            ...group,
+            rides: group.rides
+                .sort((a, b) => (b.finalScore ?? -Infinity) - (a.finalScore ?? -Infinity))
+                .slice(0, GHOST_LEADERBOARD_SIZE)
+        }))
+        .sort((a, b) => a.workoutName.localeCompare(b.workoutName)
+            || String(a.resistanceMode).localeCompare(String(b.resistanceMode)));
+}
+
 function describeGhostRide(ride) {
     const parts = [];
     const recorded = ride.recordedAt ? new Date(ride.recordedAt) : null;
     if (recorded && !isNaN(recorded)) parts.push(recorded.toLocaleDateString());
     if (ride.durationSec) parts.push(`${Math.max(1, Math.round(ride.durationSec / 60))} min`);
-    if (ride.resistanceMode) parts.push(GHOST_MODE_LABELS[ride.resistanceMode] || ride.resistanceMode);
     if (ride.ftp) parts.push(`FTP ${ride.ftp}W`);
     const avatarOption = ride.avatarType && document.querySelector(`#avatarSelect option[value="${CSS.escape(ride.avatarType)}"]`);
     if (avatarOption) parts.push(avatarOption.textContent);
@@ -276,30 +310,55 @@ function describeGhostRide(ride) {
 function renderGhostBattleList(rides) {
     const listEl = document.getElementById('ghostBattleList');
     listEl.replaceChildren();
-    rides.forEach((ride) => {
-        const itemEl = document.createElement('li');
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'w-full text-left rounded-2xl px-4 py-3 bg-gray-900/80 hover:bg-cyan-500/10 border border-gray-800 hover:border-cyan-400/50 transition cursor-pointer flex items-center justify-between gap-3';
+    buildGhostLeaderboards(rides).forEach((group) => {
+        const groupEl = document.createElement('li');
+        groupEl.className = 'rounded-2xl bg-gray-900/60 border border-gray-800 p-2.5';
 
-        const textEl = document.createElement('div');
-        textEl.className = 'min-w-0';
+        const headerEl = document.createElement('div');
+        headerEl.className = 'flex items-center justify-between gap-2 px-1 pb-1.5';
         const nameEl = document.createElement('div');
         nameEl.className = 'text-sm font-black text-white truncate';
-        nameEl.textContent = ride.workoutName;
-        const detailEl = document.createElement('div');
-        detailEl.className = 'text-[11px] text-gray-400 mt-0.5';
-        detailEl.textContent = describeGhostRide(ride);
-        textEl.append(nameEl, detailEl);
+        nameEl.textContent = group.workoutName;
+        const modeEl = document.createElement('span');
+        modeEl.className = 'shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300';
+        modeEl.textContent = GHOST_MODE_LABELS[group.resistanceMode] || group.resistanceMode || 'Unknown Mode';
+        headerEl.append(nameEl, modeEl);
 
-        const scoreEl = document.createElement('div');
-        scoreEl.className = 'shrink-0 text-right font-mono font-black text-cyan-200 text-sm';
-        scoreEl.textContent = ride.finalScore !== null ? `${formatSwissNumber(ride.finalScore)} pts` : '';
+        const ranksEl = document.createElement('ol');
+        ranksEl.className = 'flex flex-col gap-1';
+        group.rides.forEach((ride, idx) => {
+            const itemEl = document.createElement('li');
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'w-full text-left rounded-xl px-3 py-2 bg-gray-950/80 hover:bg-cyan-500/10 border border-gray-800 hover:border-cyan-400/50 transition cursor-pointer flex items-center gap-3';
 
-        btn.append(textEl, scoreEl);
-        btn.addEventListener('click', () => startGhostBattleFromFile(ride.file, btn));
-        itemEl.appendChild(btn);
-        listEl.appendChild(itemEl);
+            const medalEl = document.createElement('span');
+            medalEl.className = 'shrink-0 text-lg leading-none';
+            medalEl.textContent = GHOST_RANK_MEDALS[idx];
+            medalEl.setAttribute('aria-label', `Rank ${idx + 1}`);
+
+            const textEl = document.createElement('div');
+            textEl.className = 'min-w-0 flex-1';
+            const riderEl = document.createElement('div');
+            riderEl.className = 'text-sm font-bold text-white truncate';
+            riderEl.textContent = ride.riderName || 'Unknown rider';
+            const detailEl = document.createElement('div');
+            detailEl.className = 'text-[11px] text-gray-400 truncate';
+            detailEl.textContent = describeGhostRide(ride);
+            textEl.append(riderEl, detailEl);
+
+            const scoreEl = document.createElement('div');
+            scoreEl.className = 'shrink-0 text-right font-mono font-black text-cyan-200 text-sm';
+            scoreEl.textContent = ride.finalScore !== null ? `${formatSwissNumber(ride.finalScore)} pts` : '';
+
+            btn.append(medalEl, textEl, scoreEl);
+            btn.addEventListener('click', () => startGhostBattleFromFile(ride.file, btn));
+            itemEl.appendChild(btn);
+            ranksEl.appendChild(itemEl);
+        });
+
+        groupEl.append(headerEl, ranksEl);
+        listEl.appendChild(groupEl);
     });
 }
 
@@ -313,8 +372,8 @@ async function openGhostBattlePanel() {
         const rides = await fetchGhostRideList();
         renderGhostBattleList(rides);
         setGhostBattleStatus(rides.length
-            ? `${rides.length} ghost ride${rides.length === 1 ? '' : 's'} — pick one to start the battle.`
-            : 'No ghost rides yet. Save one from the summary (Save Ghost) into data/ghostrides.');
+            ? `Top ${GHOST_LEADERBOARD_SIZE} per workout & mode — pick a ghost to start the battle.`
+            : 'No ghost rides yet. Finish a workout and save your score & ghost in the summary.');
         const firstBtn = document.querySelector('#ghostBattleList button');
         (firstBtn || document.getElementById('ghostBattleCloseBtn')).focus();
     } catch (err) {
@@ -336,7 +395,7 @@ async function startGhostBattleFromFile(fileName, btn) {
     }
 }
 
-// Loads the ghost with all its recorded settings and starts the flight
+// Loads the ghost with its recorded settings and opens the avatar selection before the flight
 function startGhostBattle(text) {
     if (state.hasStartedSession) resetWorkoutSession();
     // Workout, Mode & wind course
@@ -347,31 +406,123 @@ function startGhostBattle(text) {
         document.getElementById('ftpInput').value = ghost.ftp;
         applyFtpWatts(ghost.ftp, false);
     }
-    if (ghost.avatarType) setAvatarType(ghost.avatarType);
 
     const panel = document.getElementById('ghostBattlePanel');
     panel.classList.add('hidden');
     panel.classList.remove('flex');
     soundEngine.init();
-    setScreen('game');
+    setScreen('avatar');
 }
 
-function downloadGhostRide() {
-    if (!state.lastSummary || !state.workoutXml || state.samples.length === 0) return;
-    const json = JSON.stringify(buildGhostRideFile());
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const safeName = (state.lastSummary.workoutName || 'loop_kicker_journey_ride')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '_');
-    const dateStr = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `${safeName}_${dateStr}.loop-kicker-journey-ghost.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+const RIDER_NAME_STORAGE_KEY = 'loop_kicker_journey_rider_name';
+
+function setRideSaveStatus(text, tone = 'info') {
+    const el = document.getElementById('summaryRideSaveStatus');
+    const toneClass = { info: 'text-gray-400', success: 'text-amber-300', error: 'text-rose-300' }[tone];
+    el.textContent = text;
+    el.className = `text-xs font-bold ${toneClass}${text ? '' : ' hidden'}`;
+}
+
+const RIDE_SCORES_API_URL = 'api/loop-kicker-journey/scores';
+// Ignores leaderboard responses of an earlier summary or one that arrives after saving
+let rideLeaderboardToken = 0;
+
+// Score & ghost saving needs server.js and a completely flown workout
+function prepareRideSaveForm(isRankedRide) {
+    const form = document.getElementById('summaryRideSaveSection');
+    const canSave = isRankedRide && /^https?:$/.test(window.location.protocol);
+    form.classList.toggle('hidden', !canSave);
+    form.classList.toggle('flex', canSave);
+    rideLeaderboardToken += 1;
+    if (!canSave) return;
+    const input = document.getElementById('summaryRiderNameInput');
+    input.value = localStorage.getItem(RIDER_NAME_STORAGE_KEY) || '';
+    input.disabled = false;
+    document.getElementById('summarySaveRideBtn').disabled = false;
+    ['summaryRiderNameInput', 'summarySaveRideBtn'].forEach((id) => document.getElementById(id).classList.remove('hidden'));
+    document.querySelector('label[for="summaryRiderNameInput"]').classList.remove('hidden');
+    setRideSaveStatus('');
+    loadProvisionalLeaderboardRank();
+}
+
+// Shows the rank this ride would get and the current top 3, before it is saved
+async function loadProvisionalLeaderboardRank() {
+    const token = rideLeaderboardToken;
+    const score = Math.round(state.totalScore);
+    renderLeaderboardRank({ rank: null, total: null, top: [], saved: false });
+    const params = new URLSearchParams({ workoutKey: getWorkoutKey(), resistanceMode: state.resistanceMode, score: String(score) });
+    try {
+        const res = await fetch(`${RIDE_SCORES_API_URL}?${params}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (token !== rideLeaderboardToken) return;
+        renderLeaderboardRank({ rank: data.rank, total: data.total + 1, top: data.top, saved: false });
+    } catch {
+        if (token === rideLeaderboardToken) document.getElementById('summaryLeaderboardTop').textContent = 'Leaderboard not available';
+    }
+}
+
+function renderLeaderboardRank({ rank, total, top, saved, ownEntry = null }) {
+    const modeLabel = GHOST_MODE_LABELS[state.resistanceMode] || state.resistanceMode;
+    document.getElementById('summaryLeaderboardLabel').textContent = saved ? 'Saved · Your Rank' : 'Your Rank · not saved yet';
+    document.getElementById('summaryLeaderboardMedal').textContent = (rank && GHOST_RANK_MEDALS[rank - 1]) || '🏁';
+    document.getElementById('summaryLeaderboardRankValue').textContent = rank ? `Rank #${rank} of ${total}` : 'Rank #–';
+    document.getElementById('summaryLeaderboardRankDetail').textContent =
+        `${ownEntry ? `${ownEntry.riderName} · ` : ''}${state.workout.name} · ${modeLabel}`;
+
+    const listEl = document.getElementById('summaryLeaderboardTop');
+    listEl.replaceChildren();
+    top.slice(0, GHOST_LEADERBOARD_SIZE).forEach((entry, idx) => {
+        const isOwn = ownEntry && entry.ghostFile === ownEntry.ghostFile;
+        const itemEl = document.createElement('li');
+        itemEl.className = `flex items-center gap-1.5 ${isOwn ? 'text-amber-300 font-black' : 'text-gray-200'}`;
+        const medalEl = document.createElement('span');
+        medalEl.textContent = GHOST_RANK_MEDALS[idx];
+        const nameEl = document.createElement('span');
+        nameEl.className = 'flex-1 min-w-0 truncate';
+        nameEl.textContent = entry.riderName || 'Unknown rider';
+        const scoreEl = document.createElement('span');
+        scoreEl.className = 'font-mono font-bold';
+        scoreEl.textContent = formatSwissNumber(entry.score);
+        itemEl.append(medalEl, nameEl, scoreEl);
+        listEl.appendChild(itemEl);
+    });
+    if (top.length === 0 && rank) listEl.textContent = 'No rides yet — be the first!';
+}
+
+// Stores the finished ride on server.js: as ghost file (selectable in Ghost Battle) and as highscore
+// ranked per workout + terrain
+async function saveRideToServer() {
+    const input = document.getElementById('summaryRiderNameInput');
+    const btn = document.getElementById('summarySaveRideBtn');
+    const riderName = input.value.trim().slice(0, 30);
+    if (!riderName) {
+        input.focus();
+        return;
+    }
+    localStorage.setItem(RIDER_NAME_STORAGE_KEY, riderName);
+    const ghostFile = { ...buildGhostRideFile(), riderName };
+    input.disabled = true;
+    btn.disabled = true;
+    setRideSaveStatus('Saving…');
+    try {
+        const res = await fetch(GHOST_RIDES_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ghostFile)
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+        rideLeaderboardToken += 1;
+        ['summaryRiderNameInput', 'summarySaveRideBtn'].forEach((id) => document.getElementById(id).classList.add('hidden'));
+        document.querySelector('label[for="summaryRiderNameInput"]').classList.add('hidden');
+        renderLeaderboardRank({ rank: result.rank, total: result.total, top: result.top, saved: true, ownEntry: result.entry });
+        setRideSaveStatus('');
+    } catch (err) {
+        input.disabled = false;
+        btn.disabled = false;
+        setRideSaveStatus(`Not saved: ${err.message}`, 'error');
+    }
 }
 
 function toggleSimMode(forceState) {

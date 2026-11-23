@@ -7,5 +7,6 @@
 Dockerfile
 .dockerignore
 escargozzled/scores.json
+data/loop-kicker-journey-scores.json
 docs
 escargozzled/docs

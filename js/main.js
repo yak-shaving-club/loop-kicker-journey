@@ -615,7 +615,10 @@ document.getElementById('ghostFileInput').addEventListener('change', (e) => {
 });
 
 document.getElementById('clearGhostBtn').addEventListener('click', clearGhostRide);
-document.getElementById('saveGhostBtn').addEventListener('click', downloadGhostRide);
+document.getElementById('summaryRideSaveSection').addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveRideToServer();
+});
 
 function updateScreenshotButtonsUI(justCaptured = false) {
     const hasScreenshot = Boolean(state.preparedScreenshotDataUrl);

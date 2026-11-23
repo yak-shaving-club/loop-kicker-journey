@@ -30,7 +30,7 @@ WRITE_PROBE="$SCORES_DIR/.write-test-$$"
 if touch "$WRITE_PROBE" 2>/dev/null; then
     rm -f "$WRITE_PROBE"
 else
-    echo "WARNING: $SCORES_DIR is not writable for user $(id -u):$(id -g); Escargozzled highscores cannot be saved." \
+    echo "WARNING: $SCORES_DIR is not writable for user $(id -u):$(id -g); highscores cannot be saved." \
         "Give the mounted folder to that user, e.g. chown -R $(id -u):$(id -g) <host folder>"
 fi
 
