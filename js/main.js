@@ -145,9 +145,17 @@ if (compactSteeringToggleCheck) {
     });
 }
 
+// Chrome keeps focus on clicked sliders/checkboxes (e.g. Dragon Power); only text fields should swallow game keys
+const NON_TEXT_INPUT_TYPES = new Set(['range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color', 'file']);
+function isTextEntryTarget(target) {
+    if (!target || !target.tagName) return false;
+    if (target.tagName === 'INPUT') return !NON_TEXT_INPUT_TYPES.has(target.type);
+    return target.tagName === 'SELECT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+}
+
 // Spacebar handler to destroy incoming 3D obstacles with Dragon Fire & Left/Right keyboard bindings to steer the dragon
 window.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    if (isTextEntryTarget(e.target)) return;
     if (isGhostBattlePanelOpen()) {
         if (e.code === 'Escape') closeGhostBattlePanel();
         return;
