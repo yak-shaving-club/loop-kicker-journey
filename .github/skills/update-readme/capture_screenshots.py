@@ -232,8 +232,13 @@ def configure_flight_controls(
             const avatarStartBtn = document.getElementById('avatarStartFlightBtn');
             if (typeof state !== 'undefined' && state.currentScreen === 'avatar' && !state.isRunning && avatarStartBtn) {{
                 avatarStartBtn.click();
-            }} else if (typeof state !== 'undefined' && !state.isRunning) {{
+            }} else if (typeof state !== 'undefined' && !state.isRunning && !state.isCountdownActive) {{
                 startFlight();
+            }}
+            // Skip the pre-flight 3-2-1 countdown & GO flash so active-flight screenshots show clean flight
+            if (typeof state !== 'undefined' && state.isCountdownActive) {{
+                if (typeof cancelStartCountdown === 'function') cancelStartCountdown();
+                if (typeof beginActiveFlight === 'function') beginActiveFlight();
             }}
         }}
 
@@ -253,6 +258,10 @@ def configure_flight_controls(
         // 5. Temporarily set forward velocity to zero so no forward movement happens and no gate is reached
         if (typeof dragon3D !== 'undefined' && dragon3D) {{
             if ({'true' if freeze_forward_velocity else 'false'}) {{
+                if (typeof workoutTickIntervalId !== 'undefined' && workoutTickIntervalId !== null) {{
+                    clearInterval(workoutTickIntervalId);
+                    workoutTickIntervalId = null;
+                }}
                 if (!dragon3D._origUpdateForScreenshots) {{
                     dragon3D._origUpdateForScreenshots = dragon3D.update.bind(dragon3D);
                     dragon3D.update = function(dt) {{
@@ -288,6 +297,9 @@ def configure_flight_controls(
                 dragon3D.subSec = 0;
                 dragon3D.flightZ = 0;
             }} else {{
+                if (typeof restartWorkoutTickInterval === 'function') {{
+                    restartWorkoutTickInterval();
+                }}
                 const fsc = document.getElementById('floatingScoreContainer');
                 if (fsc) fsc.style.display = '';
                 if (dragon3D._origUpdateForScreenshots) {{
