@@ -52,7 +52,7 @@ function updateHeaderAndSetupVisibility() {
 
     const fireContainer = document.getElementById('fireBreathContainer');
     if (fireContainer) {
-        fireContainer.classList.toggle('hidden', !state.renderObstacles);
+        fireContainer.classList.toggle('hidden', !areObstaclesEnabled());
     }
 
     updateAvatarReadySummaryUI();

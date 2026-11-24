@@ -657,14 +657,24 @@ function evaluateCanyonSplineAtZ(worldZ) {
     };
 }
 
+function isFtpTestWorkout() {
+    return Boolean(state.workout && state.workout.isFtpTest);
+}
+
+function areObstaclesEnabled() {
+    return Boolean(state.renderObstacles && !isFtpTestWorkout());
+}
+
 // Initialize the random canyon path immediately
 regenerateRandomCanyonPath();
 
 function getSimulatedTurnOffsetX(worldZ) {
+    if (isFtpTestWorkout()) return 0;
     return evaluateCanyonSplineAtZ(worldZ).x;
 }
 
 function getSimulatedTurnDerivativeX(worldZ) {
+    if (isFtpTestWorkout()) return 0;
     return evaluateCanyonSplineAtZ(worldZ).dxDz;
 }
 

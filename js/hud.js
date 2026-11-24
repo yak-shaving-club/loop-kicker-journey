@@ -197,14 +197,41 @@ function updateFtpTestHudUI() {
         hudRowEl.classList.toggle('hidden', !isFtpTest);
         hudRowEl.classList.toggle('flex', isFtpTest);
     }
+
+    const showPauseFtpCountdown = isFtpTest
+        && state.isAutoPaused
+        && !state.isRunning
+        && state.ftpTestPedalingStarted;
+    const remSec = Math.max(0, FTP_TEST_STOP_THRESHOLD_SECONDS - state.ftpTestZeroPedalSeconds);
+
+    const pauseCountdownBlock = document.getElementById('pauseFtpCountdownBlock');
+    const pauseCard = document.getElementById('zeroWattPauseCard');
+    if (pauseCountdownBlock) {
+        pauseCountdownBlock.classList.toggle('hidden', !showPauseFtpCountdown);
+        pauseCountdownBlock.classList.toggle('flex', showPauseFtpCountdown);
+    }
+    if (pauseCard) {
+        pauseCard.classList.toggle('border-amber-400/60', !showPauseFtpCountdown);
+        pauseCard.classList.toggle('border-rose-500/80', showPauseFtpCountdown);
+        pauseCard.classList.toggle('shadow-rose-500/25', showPauseFtpCountdown);
+    }
+    if (showPauseFtpCountdown) {
+        const valEl = document.getElementById('pauseFtpCountdownValue');
+        const barEl = document.getElementById('pauseFtpCountdownBar');
+        if (valEl) valEl.textContent = `${remSec}s`;
+        if (barEl) {
+            const pct = Math.max(0, Math.min(100, (remSec / Math.max(1, FTP_TEST_STOP_THRESHOLD_SECONDS)) * 100));
+            barEl.style.width = `${pct}%`;
+        }
+    }
+
     if (!isFtpTest) return;
 
     if (stopCountdownEl) {
         const showCountdown = (state.isRunning || state.isAutoPaused) && state.ftpTestPedalingStarted && state.ftpTestZeroPedalSeconds > 0;
         stopCountdownEl.classList.toggle('hidden', !showCountdown);
         if (showCountdown) {
-            const rem = Math.max(0, FTP_TEST_STOP_THRESHOLD_SECONDS - state.ftpTestZeroPedalSeconds);
-            stopCountdownEl.textContent = `Stopping in ${rem}s`;
+            stopCountdownEl.textContent = `Stopping in ${remSec}s`;
         }
     }
 

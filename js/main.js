@@ -32,7 +32,7 @@ document.getElementById('ftpInput').addEventListener('input', (e) => {
 
 document.getElementById('obstaclesToggleCheck').addEventListener('change', (e) => {
     state.renderObstacles = e.target.checked;
-    if (state.renderObstacles && dragon3D) {
+    if (areObstaclesEnabled() && dragon3D) {
         dragon3D.seedInitialGatesAndObstacles();
     }
     updateHeaderAndSetupVisibility();

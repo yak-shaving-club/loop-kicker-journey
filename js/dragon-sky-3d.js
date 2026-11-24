@@ -2025,6 +2025,7 @@ class DragonSky3DEngine {
             const xOffset = (Math.random() - 0.5) * 90;
             const yPos = 16 + Math.random() * 52;
             birdGroup.position.set(xOffset, this.getCanyonFloorElevationAtZ(zPos) + yPos, zPos);
+            birdGroup.visible = !isFtpTestWorkout();
 
             this.scene.add(birdGroup);
             this.birds.push({
@@ -2659,14 +2660,14 @@ class DragonSky3DEngine {
 
         // Optionally spawn a destructible 3D obstacle between gates and evil dragon hunters on the riverbanks when enabled
         this.gateCounter += 1;
-        if (state.renderObstacles && this.gateCounter % 2 === 0) {
+        if (areObstaclesEnabled() && this.gateCounter % 2 === 0) {
             const obsCourseSec = resolvedWorkoutSec - 0.48;
             const obsZ = this.workoutSecToWorldZ(obsCourseSec);
             const obsY = this.getCanyonFloorElevationAtZ(obsZ) + gateClearanceY;
             const obs = this.spawnObstacle(obsZ, obsY, obsCourseSec);
             gateObj.linkedObstacle = obs || null;
         }
-        if (state.renderObstacles) {
+        if (areObstaclesEnabled()) {
             const hunterBaseCourseSec = resolvedWorkoutSec - 0.32;
             this.spawnDragonHunterPair(this.workoutSecToWorldZ(hunterBaseCourseSec), hunterBaseCourseSec);
         }
@@ -2749,7 +2750,7 @@ class DragonSky3DEngine {
     }
 
     spawnDragonHunterPair(worldZ, baseCourseSec = null) {
-        if (!this.initialized || !state.renderObstacles) return;
+        if (!this.initialized || !areObstaclesEnabled()) return;
         const rightCourseSec = typeof baseCourseSec === 'number' ? (baseCourseSec + 0.21) : null;
         const rightZ = rightCourseSec !== null ? this.workoutSecToWorldZ(rightCourseSec) : (worldZ - 14.0);
         this.spawnDragonHunter(worldZ, -1, baseCourseSec); // Left of the river
@@ -3196,10 +3197,11 @@ class DragonSky3DEngine {
             c.mesh.position.x = getSimulatedTurnOffsetX(zPos) + (Math.random() - 0.5) * 165;
             c.mesh.position.y = this.getCanyonFloorElevationAtZ(zPos) + (c.heightAboveFloor || 42);
         });
+        const hideBirds = isFtpTestWorkout();
         this.birds.forEach((b, i) => {
             const zPos = -40 - ((i * 23) % 360);
             b.hit = false;
-            b.group.visible = true;
+            b.group.visible = !hideBirds;
             b.lastRelZ = null;
             b.group.position.z = zPos;
             b.group.position.x = getSimulatedTurnOffsetX(zPos) + b.xOffset;
@@ -3356,7 +3358,7 @@ class DragonSky3DEngine {
     getFireWindowStatus() {
         const FIRE_WINDOW_SECONDS = 3.0;
         const FIREBALL_POINT_COST = 15;
-        if (!state.isRunning || !state.renderObstacles) {
+        if (!state.isRunning || !areObstaclesEnabled()) {
             return { canFire: false, nextObs: null, secondsUntilReach: Infinity, pointCost: FIREBALL_POINT_COST };
         }
         const nextObs = this.findNextObstacleAhead();
@@ -4035,7 +4037,13 @@ class DragonSky3DEngine {
             });
 
             // Animate & recycle flocks of birds; a bird crossing the dragon's position within the hit box is a bird strike
+            const hideBirds = isFtpTestWorkout();
             this.birds.forEach((b) => {
+                if (hideBirds) {
+                    b.group.visible = false;
+                    b.lastRelZ = null;
+                    return;
+                }
                 b.flapOffset += dt * b.flapSpeed;
                 const flap = Math.sin(b.flapOffset) * 0.65;
                 b.leftWing.rotation.z = flap;
@@ -4128,9 +4136,10 @@ class DragonSky3DEngine {
 
         // Update Obstacles, Spacebar warning reticle & collision checks
         let obstacleInStrikeZone = false;
+        const obstaclesActive = areObstaclesEnabled();
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obs = this.obstacles[i];
-            if (!state.renderObstacles) {
+            if (!obstaclesActive) {
                 this.scene.remove(obs.group);
                 this.obstacles.splice(i, 1);
                 continue;
@@ -4176,7 +4185,7 @@ class DragonSky3DEngine {
         // Update Evil Dragon Hunters standing left and right from the river & their fired arrows
         for (let i = this.dragonHunters.length - 1; i >= 0; i--) {
             const hunter = this.dragonHunters[i];
-            if (!state.renderObstacles) {
+            if (!obstaclesActive) {
                 this.scene.remove(hunter.group);
                 this.dragonHunters.splice(i, 1);
                 continue;
@@ -4214,7 +4223,7 @@ class DragonSky3DEngine {
 
         for (let i = this.hunterArrows.length - 1; i >= 0; i--) {
             const arrow = this.hunterArrows[i];
-            if (!state.renderObstacles || arrow.hitTriggered) {
+            if (!obstaclesActive || arrow.hitTriggered) {
                 this.scene.remove(arrow.mesh);
                 this.hunterArrows.splice(i, 1);
                 continue;
