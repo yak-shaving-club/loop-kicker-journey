@@ -25,6 +25,7 @@ const state = {
     simAutoJitter: false,
     workout: null,
     isRunning: false,
+    isAutoPaused: false,
     hasStartedSession: false,
     forceShowSetupDuringTraining: false,
     elapsedSec: 0,

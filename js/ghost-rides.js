@@ -552,6 +552,7 @@ function toggleSimMode(forceState) {
             if (!bleCadenceSensor.connected) state.cadence = 0;
         }
     }
+    if (typeof syncZeroWattPauseState === 'function') syncZeroWattPauseState();
     updateHeaderAndSetupVisibility();
     updateLiveHud();
 }

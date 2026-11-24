@@ -96,6 +96,16 @@ function updateLiveHud() {
     const cadenceEl = document.getElementById('cadenceDisplay');
     if (cadenceEl) cadenceEl.textContent = formatSwissNumber(state.cadence);
 
+    const pauseOverlayEl = document.getElementById('zeroWattPauseOverlay');
+    if (pauseOverlayEl) {
+        const showZeroWattPause = state.currentScreen === 'game'
+            && state.hasStartedSession
+            && !state.isRunning
+            && state.isAutoPaused;
+        pauseOverlayEl.classList.toggle('hidden', !showZeroWattPause);
+        pauseOverlayEl.classList.toggle('flex', showZeroWattPause);
+    }
+
     updateFtpTestHudUI();
     updateExpectedWorkoutMetricsUI();
     drawWorkoutTimeline();
@@ -169,7 +179,7 @@ function updateFtpTestHudUI() {
     if (!isFtpTest) return;
 
     if (stopCountdownEl) {
-        const showCountdown = state.isRunning && state.ftpTestPedalingStarted && state.ftpTestZeroPedalSeconds > 0;
+        const showCountdown = (state.isRunning || state.isAutoPaused) && state.ftpTestPedalingStarted && state.ftpTestZeroPedalSeconds > 0;
         stopCountdownEl.classList.toggle('hidden', !showCountdown);
         if (showCountdown) {
             const rem = Math.max(0, FTP_TEST_STOP_THRESHOLD_SECONDS - state.ftpTestZeroPedalSeconds);
@@ -389,8 +399,39 @@ function computeTrainingMetrics() {
     };
 }
 
+function isZeroWattPauseCondition() {
+    const hasDedicatedCadenceZero = !state.simMode && bleCadenceSensor.connected && state.cadence <= 0 && state.actualWatts < 20;
+    return (Number(state.actualWatts) || 0) <= 0 || hasDedicatedCadenceZero;
+}
+
+function syncZeroWattPauseState() {
+    if (state.currentScreen !== 'game' || !state.workout || !state.hasStartedSession) {
+        return false;
+    }
+    const zeroWatts = isZeroWattPauseCondition();
+    if (zeroWatts && state.isRunning) {
+        state.isRunning = false;
+        state.isAutoPaused = true;
+        if (!bleCadenceSensor.connected) state.cadence = 0;
+        syncActionButtonsUI();
+        updateLiveHud();
+        return true;
+    }
+    if (!zeroWatts && !state.isRunning && state.isAutoPaused) {
+        state.isRunning = true;
+        state.isAutoPaused = false;
+        state.ftpTestZeroPedalSeconds = 0;
+        syncActionButtonsUI();
+        updateLiveHud();
+        return true;
+    }
+    return false;
+}
+
 function executeWorkoutTick() {
-    if (!state.isRunning || !state.workout) return;
+    if (!state.workout) return;
+    if (!state.isRunning && !state.isAutoPaused) return;
+    if (state.isAutoPaused && (state.currentScreen !== 'game' || !state.hasStartedSession)) return;
 
     stepTerrainGradient();
     const targetWatts = getTargetWattsAtSecond(state.workout, state.elapsedSec, state.ftp);
@@ -420,16 +461,13 @@ function executeWorkoutTick() {
         }
     }
 
-    const isFtpTest = Boolean(state.workout && state.workout.isFtpTest);
-    const hasDedicatedCadenceZero = !state.simMode && bleCadenceSensor.connected && state.cadence <= 0 && state.actualWatts < 20;
-    const riderStoppedPedaling = state.actualWatts <= 0 || hasDedicatedCadenceZero;
+    syncZeroWattPauseState();
 
-    // Stop forward motion and workout progression when the user is not generating any watts
-    if (riderStoppedPedaling) {
+    const isFtpTest = Boolean(state.workout && state.workout.isFtpTest);
+
+    // Pause mode when the trainer / virtual power is 0 W: freeze workout progression, motion and music
+    if (!state.isRunning) {
         if (!bleCadenceSensor.connected) state.cadence = 0;
-        state.streakSeconds = 0;
-        state.comboMultiplier = 1.0;
-        state.lastPointsAwarded = 0;
 
         if (isFtpTest && state.ftpTestPedalingStarted) {
             state.ftpTestZeroPedalSeconds += 1;
@@ -574,20 +612,36 @@ function startFlight() {
     }
     state.hasStartedSession = true;
     state.forceShowSetupDuringTraining = false;
-    state.isRunning = true;
+    if (state.simMode && state.simAutoJitter) {
+        const targetW = Math.max(0, getTargetWattsAtSecond(state.workout, state.elapsedSec, state.ftp));
+        state.actualWatts = targetW;
+        const slider = document.getElementById('simWattSlider');
+        const readout = document.getElementById('simWattReadout');
+        if (slider) slider.value = targetW;
+        if (readout) readout.textContent = `${targetW} W`;
+    }
+    if (isZeroWattPauseCondition()) {
+        state.isRunning = false;
+        state.isAutoPaused = true;
+    } else {
+        state.isRunning = true;
+        state.isAutoPaused = false;
+    }
     syncActionButtonsUI();
     updateLiveHud();
 }
 
 function pauseFlight() {
-    if (!state.isRunning) return;
+    if (!state.isRunning && !state.isAutoPaused) return;
     state.isRunning = false;
+    state.isAutoPaused = false;
     syncActionButtonsUI();
     updateLiveHud();
 }
 
 function resetWorkoutSession() {
     state.isRunning = false;
+    state.isAutoPaused = false;
     state.hasStartedSession = false;
     state.forceShowSetupDuringTraining = false;
     state.elapsedSec = 0;
@@ -634,6 +688,7 @@ function finishWorkoutAndShowSummary() {
     const isRankedRide = Boolean(state.workout)
         && (state.workout.isFtpTest || state.elapsedSec >= state.workout.totalDuration);
     state.isRunning = false;
+    state.isAutoPaused = false;
     state.hasStartedSession = false;
     state.forceShowSetupDuringTraining = false;
     state.ftpTestZeroPedalSeconds = 0;

@@ -1720,6 +1720,22 @@
             </div>
         </div>
 
+        <!-- CENTER ZERO-WATT PAUSE OVERLAY -->
+        <div id="zeroWattPauseOverlay"
+             class="hidden items-center justify-center pointer-events-none select-none my-auto">
+            <div class="bg-gray-950/80 backdrop-blur-md border-2 border-amber-400/60 rounded-2xl px-6 py-3.5 shadow-2xl flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-amber-300 shrink-0" aria-hidden="true">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/>
+                    </svg>
+                </div>
+                <div class="text-left">
+                    <div class="text-lg sm:text-xl font-black uppercase tracking-widest text-amber-300 leading-tight">Paused</div>
+                    <div class="text-xs sm:text-sm font-semibold text-gray-200">0 W from trainer &mdash; pedal to resume flight</div>
+                </div>
+            </div>
+        </div>
+
         <!-- BOTTOM FLOATING STACK: COMPACT WORKOUT TIMELINE OVERLAY -->
         <div class="flex flex-col gap-2 w-full max-w-[1600px] mx-auto pointer-events-none">
 

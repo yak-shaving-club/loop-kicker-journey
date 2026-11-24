@@ -3776,7 +3776,7 @@ class DragonSky3DEngine {
             this.starsMat.opacity = 0.78 + Math.sin(performance.now() * 0.0025) * 0.18;
         }
         if (this.riverTexture && isMovingForward) {
-            this.riverTexture.offset.y -= dt * 0.45;
+            this.riverTexture.offset.y -= dt * 0.45 * (forwardSpeed / DEFAULT_GATE_SPACING_Z);
         }
 
         if (isMovingForward) {

@@ -159,6 +159,7 @@ const bleCadenceSensor = new BleCadenceSensor(
         if (measurement.cadence !== null && measurement.cadence !== undefined) {
             state.cadence = Math.max(0, Math.round(measurement.cadence));
         }
+        if (typeof syncZeroWattPauseState === 'function') syncZeroWattPauseState();
         updateLiveHud();
     },
     (status, label) => {
@@ -278,6 +279,7 @@ const bleTrainer = new WahooKickrBluetooth(
                 state.cadence = 85;
             }
         }
+        if (typeof syncZeroWattPauseState === 'function') syncZeroWattPauseState();
         updateLiveHud();
     },
     (status, label) => {
@@ -313,6 +315,7 @@ const bleRower = new BleConcept2Rower(
                 bleEliteAriaFan.onStatus('error', 'Elite Aria control error');
             });
         }
+        if (typeof syncZeroWattPauseState === 'function') syncZeroWattPauseState();
         updateLiveHud();
     },
     (status, label) => {
