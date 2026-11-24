@@ -6,6 +6,7 @@ const musicEngine = new AdaptiveMusicEngine(soundEngine);
 const fxEngine = new VisualEffectsEngine(document.getElementById('fxCanvas'));
 
 const FTP_TEST_STOP_THRESHOLD_SECONDS = 5;
+const START_COUNTDOWN_SECONDS = 5;
 const DONUT_GATE_TOLERANCE_WATTS = 30;
 
 const state = {
@@ -26,6 +27,9 @@ const state = {
     workout: null,
     isRunning: false,
     isAutoPaused: false,
+    isCountdownActive: false,
+    countdownRemainingSec: 0,
+    countdownGoFlashUntilMs: 0,
     hasStartedSession: false,
     forceShowSetupDuringTraining: false,
     elapsedSec: 0,

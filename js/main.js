@@ -1095,7 +1095,7 @@ document.getElementById('summaryFlyAgainBtn').addEventListener('click', () => {
 
     dragon3D = new DragonSky3DEngine(document.getElementById('threeCanvasContainer'));
 
-    setInterval(executeWorkoutTick, 1000);
+    restartWorkoutTickInterval();
 
     let lastFrameTime = performance.now();
     function renderLoop(now) {

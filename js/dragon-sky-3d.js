@@ -98,6 +98,9 @@ class DragonSky3DEngine {
         this.wingFlapPhase = 0;
 
         this.gates = [];
+        this.startLine = null;
+        this.finishLine = null;
+        this.ghostBobPhase = 0;
         this.obstacles = [];
         this.dragonHunters = [];
         this.hunterArrows = [];
@@ -2171,9 +2174,18 @@ class DragonSky3DEngine {
 
         this.ghostClearanceY = this.dragonClearanceY;
         this.ghostCurrentY = this.dragonCurrentY;
+        this.ghostBobPhase = 0;
         this.ghostGroup = ghost;
         this.scene.add(ghost);
-        this.updateGhost(0);
+        this.resetGhostToStart();
+    }
+
+    resetGhostToStart() {
+        this.ghostBobPhase = 0;
+        if (!this.ghostGroup || !state.ghost) return;
+        const initWatts = getGhostRideWattsAtSecond(0);
+        this.ghostClearanceY = wattsToSkyAltitudeY(initWatts, state.ftp, state.currentGradientPct);
+        this.updateGhost(0, true, false);
     }
 
     // Ghost avatar position in % of the arena, or null when it is hidden or behind the camera
@@ -2184,25 +2196,34 @@ class DragonSky3DEngine {
         return { xPct: (p.x + 1) * 50, yPct: (1 - p.y) * 50 };
     }
 
-    updateGhost(dt) {
+    updateGhost(dt, forceSync = false, isMovingForward = false) {
         if (!this.ghostGroup) return;
         if (!state.ghost) {
             this.ghostGroup.visible = false;
             return;
         }
+        // Freeze the ghost avatar whenever the game is paused or waiting in the start countdown
+        if (!isMovingForward && !forceSync) {
+            return;
+        }
+
+        const isWaitingAtStart = !state.hasStartedSession || state.isCountdownActive;
         // Everyone flies at the same forward speed; the ghost leads the avatar by one second (one gate)
-        const sec = state.elapsedSec + GHOST_LEAD_SECONDS;
+        const sec = isWaitingAtStart ? 0 : (state.elapsedSec + GHOST_LEAD_SECONDS);
         const ghostZ = this.flightZ - this.gateSpacingZ * GHOST_LEAD_SECONDS;
 
         const desiredClearanceY = wattsToSkyAltitudeY(getGhostRideWattsAtSecond(sec), state.ftp, state.currentGradientPct);
-        if (typeof this.ghostClearanceY !== 'number' || isNaN(this.ghostClearanceY)) {
+        if (forceSync || typeof this.ghostClearanceY !== 'number' || isNaN(this.ghostClearanceY)) {
             this.ghostClearanceY = desiredClearanceY;
         } else {
             this.ghostClearanceY += (desiredClearanceY - this.ghostClearanceY) * Math.min(1, dt * 2.5);
         }
         const ghostFloorY = this.getCanyonFloorElevationAtZ(ghostZ);
         this.ghostCurrentY = ghostFloorY + this.ghostClearanceY;
-        const bob = Math.sin(performance.now() * 0.003) * 0.15;
+        if (isMovingForward) {
+            this.ghostBobPhase = (this.ghostBobPhase || 0) + dt * 3.0;
+        }
+        const bob = isWaitingAtStart ? 0 : Math.sin(this.ghostBobPhase || 0) * 0.15;
         const heading = Math.atan(-getSimulatedTurnDerivativeX(ghostZ));
         const ghostSlopePitch = Math.max(-0.42, Math.min(0.42, Math.atan(this.getCanyonSlopeRatioAtZ(ghostZ)) * 0.85));
 
@@ -2553,6 +2574,7 @@ class DragonSky3DEngine {
     spawnDonutGate(worldZ, workoutSec) {
         if (!this.initialized) return;
         const resolvedWorkoutSec = Math.max(0, Math.round(workoutSec));
+        if (state.workout && resolvedWorkoutSec >= state.workout.totalDuration) return;
         worldZ = this.workoutSecToWorldZ(resolvedWorkoutSec);
         const baseWatts = getBaseTargetWattsAtSecond(state.workout, resolvedWorkoutSec, state.ftp);
         const gradAtGate = getGradientPctAtSecond(resolvedWorkoutSec);
@@ -2877,6 +2899,201 @@ class DragonSky3DEngine {
         return obsObj;
     }
 
+    createCheckeredCanvasTexture(colorA, colorB, cols, rows) {
+        const tile = 32;
+        const canvas = document.createElement('canvas');
+        canvas.width = cols * tile;
+        canvas.height = rows * tile;
+        const ctx = canvas.getContext('2d');
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                ctx.fillStyle = (r + c) % 2 === 0 ? colorA : colorB;
+                ctx.fillRect(c * tile, r * tile, tile, tile);
+            }
+        }
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.needsUpdate = true;
+        return tex;
+    }
+
+    createCourseLineBannerTexture(type) {
+        const isFinish = type === 'finish';
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 192;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = isFinish ? '#111827' : '#064e3b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Checkered side panels
+        const sq = 32;
+        const sideCols = 5;
+        for (let r = 0; r < canvas.height / sq; r++) {
+            for (let c = 0; c < sideCols; c++) {
+                const isLight = (r + c) % 2 === 0;
+                ctx.fillStyle = isLight ? '#ffffff' : (isFinish ? '#111827' : '#10b981');
+                ctx.fillRect(c * sq, r * sq, sq, sq);
+                ctx.fillRect(canvas.width - (c + 1) * sq, r * sq, sq, sq);
+            }
+        }
+
+        // Top and bottom accent bars
+        ctx.fillStyle = isFinish ? '#fbbf24' : '#34d399';
+        ctx.fillRect(0, 0, canvas.width, 14);
+        ctx.fillRect(0, canvas.height - 14, canvas.width, 14);
+
+        // Bold centered label
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 112px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = isFinish ? 'rgba(251,191,36,0.75)' : 'rgba(52,211,153,0.75)';
+        ctx.shadowBlur = 18;
+        ctx.fillText(isFinish ? 'FINISH' : 'START', canvas.width / 2, canvas.height / 2 + 4);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        return tex;
+    }
+
+    disposeCourseLine(lineObj) {
+        if (!lineObj || !lineObj.group) return;
+        this.scene.remove(lineObj.group);
+        lineObj.group.traverse((obj) => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+                mats.forEach((m) => {
+                    if (m.map) m.map.dispose();
+                    m.dispose();
+                });
+            }
+        });
+    }
+
+    createCourseLineArch(type, courseSec) {
+        const isFinish = type === 'finish';
+        const group = new THREE.Group();
+        const halfSpanX = 16.5;
+        const pylonHeight = 62.0;
+
+        // Tall checkered pylons on both sides of the river/canyon
+        const pylonTex = this.createCheckeredCanvasTexture(
+            '#ffffff',
+            isFinish ? '#111827' : '#059669',
+            2,
+            18
+        );
+        const pylonGeo = new THREE.CylinderGeometry(0.85, 1.15, pylonHeight, 12);
+        const pylonMat = new THREE.MeshLambertMaterial({
+            map: pylonTex,
+            emissive: isFinish ? 0x3f2e05 : 0x064e3b,
+            emissiveIntensity: 0.35
+        });
+
+        const capGeo = new THREE.SphereGeometry(1.45, 12, 12);
+        const capMat = new THREE.MeshBasicMaterial({
+            color: isFinish ? 0xfbbf24 : 0x34d399
+        });
+
+        [-halfSpanX, halfSpanX].forEach((px) => {
+            const pylon = new THREE.Mesh(pylonGeo, pylonMat);
+            pylon.position.set(px, pylonHeight * 0.5 - 10.0, 0);
+            group.add(pylon);
+
+            const cap = new THREE.Mesh(capGeo, capMat);
+            cap.position.set(px, pylonHeight - 10.0 + 0.8, 0);
+            group.add(cap);
+        });
+
+        // Checkered ground/river line strip across the canyon floor
+        const stripTex = this.createCheckeredCanvasTexture(
+            '#ffffff',
+            isFinish ? '#111827' : '#10b981',
+            16,
+            2
+        );
+        const stripGeo = new THREE.PlaneGeometry(halfSpanX * 2, 3.8);
+        stripGeo.rotateX(-Math.PI / 2);
+        const stripMat = new THREE.MeshBasicMaterial({
+            map: stripTex,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.92
+        });
+        const stripMesh = new THREE.Mesh(stripGeo, stripMat);
+        stripMesh.position.set(0, 0.55, 0);
+        group.add(stripMesh);
+
+        // Overhead gantry banner framed comfortably above the flight path
+        const sampleSec = isFinish
+            ? Math.max(0, (state.workout ? state.workout.totalDuration : 1) - 1)
+            : 0;
+        const refWatts = getTargetWattsAtSecond(state.workout, sampleSec, state.ftp);
+        const refClearanceY = wattsToSkyAltitudeY(refWatts, state.ftp, getGradientPctAtSecond(sampleSec));
+        const refRadius = getDonutRadiusForTargetWatts(refWatts, state.ftp, getGradientPctAtSecond(sampleSec));
+        const bannerY = Math.max(18.0, Math.min(46.0, refClearanceY + refRadius + 5.0));
+
+        const bannerTex = this.createCourseLineBannerTexture(type);
+        const bannerGeo = new THREE.PlaneGeometry(halfSpanX * 2, 5.6);
+        const bannerMat = new THREE.MeshBasicMaterial({
+            map: bannerTex,
+            side: THREE.DoubleSide
+        });
+        const bannerMesh = new THREE.Mesh(bannerGeo, bannerMat);
+        bannerMesh.position.set(0, bannerY, 0);
+        group.add(bannerMesh);
+
+        // Support crossbar behind the banner
+        const beamGeo = new THREE.BoxGeometry(halfSpanX * 2 + 1.2, 0.55, 0.55);
+        const beamMat = new THREE.MeshLambertMaterial({ color: isFinish ? 0xfbbf24 : 0x34d399 });
+        const topBeam = new THREE.Mesh(beamGeo, beamMat);
+        topBeam.position.set(0, bannerY + 2.95, 0);
+        group.add(topBeam);
+        const bottomBeam = new THREE.Mesh(beamGeo, beamMat);
+        bottomBeam.position.set(0, bannerY - 2.95, 0);
+        group.add(bottomBeam);
+
+        this.scene.add(group);
+        const lineObj = { type, group, courseSec, worldZ: 0 };
+        this.syncCourseLinePosition(lineObj);
+        return lineObj;
+    }
+
+    syncCourseLinePosition(lineObj) {
+        if (!lineObj || !lineObj.group || !this.initialized) return;
+        const worldZ = this.workoutSecToWorldZ(lineObj.courseSec);
+        const centerX = getSimulatedTurnOffsetX(worldZ);
+        const floorY = this.getCanyonFloorElevationAtZ(worldZ);
+        const yawY = Math.atan(getSimulatedTurnDerivativeX(worldZ));
+        lineObj.worldZ = worldZ;
+        lineObj.group.position.set(centerX, floorY, worldZ);
+        lineObj.group.rotation.order = 'YXZ';
+        lineObj.group.rotation.set(0, yawY, 0);
+        lineObj.group.visible = worldZ >= this.flightZ - 580 && worldZ <= this.flightZ + 45;
+    }
+
+    rebuildCourseStartAndFinishLines() {
+        this.disposeCourseLine(this.startLine);
+        this.disposeCourseLine(this.finishLine);
+        this.startLine = null;
+        this.finishLine = null;
+        if (!this.initialized || !state.workout) return;
+
+        // Place Start Line directly in front of the avatar at the start (before Gate 0)
+        const startCourseSec = -this.firstGateLeadTimeSec + 0.14;
+        this.startLine = this.createCourseLineArch('start', startCourseSec);
+
+        // Place Finish Line at the exact course position where elapsedSec reaches totalDuration
+        const totalDuration = Math.max(1, state.workout.totalDuration || 1);
+        const finishCourseSec = totalDuration - this.firstGateLeadTimeSec;
+        this.finishLine = this.createCourseLineArch('finish', finishCourseSec);
+    }
+
     seedInitialGatesAndObstacles(preserveVerticalCameraAndDragon = false) {
         if (!this.initialized) return;
         const prevFloorY = typeof this.lastDragonFloorY === 'number' ? this.lastDragonFloorY : 0;
@@ -2989,7 +3206,9 @@ class DragonSky3DEngine {
             b.group.position.y = this.getCanyonFloorElevationAtZ(zPos) + b.yBase;
         });
 
+        const maxWorkoutSec = state.workout ? state.workout.totalDuration : Infinity;
         while (
+            this.nextGateWorkoutSec < maxWorkoutSec &&
             (this.gates.length < 8 || this.workoutSecToWorldZ(this.nextGateWorkoutSec) > this.flightZ - 520) &&
             this.gates.length < 30
         ) {
@@ -2998,6 +3217,12 @@ class DragonSky3DEngine {
             this.nextGateWorkoutSec += 1;
         }
         this.nextGateZ = this.workoutSecToWorldZ(this.nextGateWorkoutSec);
+        this.rebuildCourseStartAndFinishLines();
+        if (!preserveVerticalCameraAndDragon || state.elapsedSec === 0) {
+            this.resetGhostToStart();
+        } else {
+            this.updateGhost(0, true, false);
+        }
         if (this.hasNonZeroTerrainGrade) {
             this.syncSceneryHeightsForCourseChange();
         }
@@ -3092,7 +3317,9 @@ class DragonSky3DEngine {
 
         this.gates.forEach((g) => this.syncGateToDesiredWatts(g));
         this.nextGateZ = this.workoutSecToWorldZ(this.nextGateWorkoutSec);
-        this.updateGhost(0);
+        this.syncCourseLinePosition(this.startLine);
+        this.syncCourseLinePosition(this.finishLine);
+        this.updateGhost(0, true, false);
     }
 
     /**
@@ -3727,7 +3954,7 @@ class DragonSky3DEngine {
             verticalVelocity: this.dragonVelocityY || 0
         });
 
-        this.updateGhost(stepDt);
+        this.updateGhost(stepDt, false, isMovingForward);
 
         const tolW = getAccuracyToleranceWatts();
 
@@ -3834,12 +4061,14 @@ class DragonSky3DEngine {
             });
         }
 
-        // Spawn new Donut Gates ahead (scaled dynamically to current speed) & evaluate passing through gates
+        // Spawn new Donut Gates ahead up to the finish line (never after totalDuration)
         let upcomingUnpassedCount = 0;
         for (let i = 0; i < this.gates.length; i++) {
             if (!this.gates[i].passed) upcomingUnpassedCount += 1;
         }
+        const maxWorkoutSec = state.workout ? state.workout.totalDuration : Infinity;
         while (
+            this.nextGateWorkoutSec < maxWorkoutSec &&
             (upcomingUnpassedCount < 8 || this.workoutSecToWorldZ(this.nextGateWorkoutSec) > this.flightZ - 520) &&
             upcomingUnpassedCount < 30
         ) {
@@ -3849,6 +4078,8 @@ class DragonSky3DEngine {
             upcomingUnpassedCount += 1;
         }
         this.nextGateZ = this.workoutSecToWorldZ(this.nextGateWorkoutSec);
+        this.syncCourseLinePosition(this.startLine);
+        this.syncCourseLinePosition(this.finishLine);
 
         for (let i = this.gates.length - 1; i >= 0; i--) {
             const g = this.gates[i];

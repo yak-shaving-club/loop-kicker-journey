@@ -190,7 +190,10 @@ function updateGhostHud() {
         scoreEl.textContent = 'Tied';
         scoreEl.className = `${baseClass} bg-gray-500/15 border-gray-400/40 text-gray-200`;
     }
-    document.getElementById('ghostWattsDisplay').textContent = Math.round(getGhostRideWattsAtSecond(state.elapsedSec));
+    const ghostWatts = (!state.hasStartedSession || state.isCountdownActive)
+        ? 0
+        : Math.round(getGhostRideWattsAtSecond(state.elapsedSec));
+    document.getElementById('ghostWattsDisplay').textContent = ghostWatts;
 }
 
 function getGhostRaceResultText() {

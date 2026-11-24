@@ -96,10 +96,35 @@ function updateLiveHud() {
     const cadenceEl = document.getElementById('cadenceDisplay');
     if (cadenceEl) cadenceEl.textContent = formatSwissNumber(state.cadence);
 
+    const countdownOverlayEl = document.getElementById('startCountdownOverlay');
+    if (countdownOverlayEl) {
+        const showGoFlash = state.currentScreen === 'game'
+            && !state.isCountdownActive
+            && state.countdownGoFlashUntilMs > performance.now();
+        const showCountdown = state.currentScreen === 'game' && (state.isCountdownActive || showGoFlash);
+        countdownOverlayEl.classList.toggle('hidden', !showCountdown);
+        countdownOverlayEl.classList.toggle('flex', showCountdown);
+        if (showCountdown) {
+            const numEl = document.getElementById('startCountdownNumber');
+            const labelEl = document.getElementById('startCountdownLabel');
+            const subEl = document.getElementById('startCountdownSubtitle');
+            if (state.isCountdownActive) {
+                if (numEl) numEl.textContent = String(Math.max(1, state.countdownRemainingSec));
+                if (labelEl) labelEl.textContent = 'Get Ready — Start Pedaling!';
+                if (subEl) subEl.textContent = `Target first gate: ${targetWatts} W · Live: ${state.actualWatts} W`;
+            } else {
+                if (numEl) numEl.textContent = 'GO!';
+                if (labelEl) labelEl.textContent = 'Flight Started!';
+                if (subEl) subEl.textContent = 'Fly through the gates!';
+            }
+        }
+    }
+
     const pauseOverlayEl = document.getElementById('zeroWattPauseOverlay');
     if (pauseOverlayEl) {
         const showZeroWattPause = state.currentScreen === 'game'
             && state.hasStartedSession
+            && !state.isCountdownActive
             && !state.isRunning
             && state.isAutoPaused;
         pauseOverlayEl.classList.toggle('hidden', !showZeroWattPause);
@@ -405,7 +430,7 @@ function isZeroWattPauseCondition() {
 }
 
 function syncZeroWattPauseState() {
-    if (state.currentScreen !== 'game' || !state.workout || !state.hasStartedSession) {
+    if (state.currentScreen !== 'game' || !state.workout || !state.hasStartedSession || state.isCountdownActive) {
         return false;
     }
     const zeroWatts = isZeroWattPauseCondition();
@@ -429,7 +454,7 @@ function syncZeroWattPauseState() {
 }
 
 function executeWorkoutTick() {
-    if (!state.workout) return;
+    if (!state.workout || state.isCountdownActive) return;
     if (!state.isRunning && !state.isAutoPaused) return;
     if (state.isAutoPaused && (state.currentScreen !== 'game' || !state.hasStartedSession)) return;
 
@@ -600,13 +625,33 @@ function syncActionButtonsUI() {
 }
 
 let dragon3D = null;
+let startCountdownIntervalId = null;
+let startCountdownGoTimeoutId = null;
+let workoutTickIntervalId = null;
 
-function startFlight() {
-    if (!state.workout || state.isRunning) return;
-    soundEngine.init();
-    if (state.elapsedSec >= state.workout.totalDuration) {
-        resetWorkoutSession();
+function restartWorkoutTickInterval() {
+    if (workoutTickIntervalId !== null) {
+        clearInterval(workoutTickIntervalId);
     }
+    workoutTickIntervalId = setInterval(executeWorkoutTick, 1000);
+}
+
+function cancelStartCountdown() {
+    if (startCountdownIntervalId !== null) {
+        clearInterval(startCountdownIntervalId);
+        startCountdownIntervalId = null;
+    }
+    if (startCountdownGoTimeoutId !== null) {
+        clearTimeout(startCountdownGoTimeoutId);
+        startCountdownGoTimeoutId = null;
+    }
+    state.isCountdownActive = false;
+    state.countdownRemainingSec = 0;
+    state.countdownGoFlashUntilMs = 0;
+}
+
+function beginActiveFlight() {
+    if (!state.workout) return;
     if (!state.startTimeMs) {
         state.startTimeMs = Date.now();
     }
@@ -627,11 +672,94 @@ function startFlight() {
         state.isRunning = true;
         state.isAutoPaused = false;
     }
+    restartWorkoutTickInterval();
     syncActionButtonsUI();
     updateLiveHud();
 }
 
+function beginStartCountdown() {
+    cancelStartCountdown();
+    state.hasStartedSession = true;
+    state.forceShowSetupDuringTraining = false;
+    state.isRunning = false;
+    state.isAutoPaused = false;
+    state.isCountdownActive = true;
+    state.countdownRemainingSec = START_COUNTDOWN_SECONDS;
+
+    if (state.simMode && state.simAutoJitter) {
+        const targetW = Math.max(0, getTargetWattsAtSecond(state.workout, state.elapsedSec, state.ftp));
+        state.actualWatts = targetW;
+        const slider = document.getElementById('simWattSlider');
+        const readout = document.getElementById('simWattReadout');
+        if (slider) slider.value = targetW;
+        if (readout) readout.textContent = `${targetW} W`;
+    }
+    if (dragon3D) {
+        dragon3D.subSec = 0;
+        dragon3D.resetGhostToStart();
+    }
+
+    soundEngine.playCountdownTick(state.countdownRemainingSec);
+    syncActionButtonsUI();
+    updateLiveHud();
+
+    startCountdownIntervalId = setInterval(() => {
+        if (!state.isCountdownActive || state.currentScreen !== 'game') {
+            cancelStartCountdown();
+            updateLiveHud();
+            return;
+        }
+        state.countdownRemainingSec -= 1;
+        if (state.countdownRemainingSec > 0) {
+            soundEngine.playCountdownTick(state.countdownRemainingSec);
+            updateLiveHud();
+            return;
+        }
+
+        // Countdown finished: start real avatar and ghost playback at the exact same instant
+        clearInterval(startCountdownIntervalId);
+        startCountdownIntervalId = null;
+        state.isCountdownActive = false;
+        state.countdownRemainingSec = 0;
+        state.countdownGoFlashUntilMs = performance.now() + 750;
+        state.startTimeMs = Date.now();
+        if (dragon3D) {
+            dragon3D.subSec = 0;
+            dragon3D.resetGhostToStart();
+        }
+        soundEngine.playCountdownGo();
+        beginActiveFlight();
+        startCountdownGoTimeoutId = setTimeout(() => {
+            startCountdownGoTimeoutId = null;
+            state.countdownGoFlashUntilMs = 0;
+            updateLiveHud();
+        }, 780);
+    }, 1000);
+}
+
+function startFlight() {
+    if (!state.workout || state.isRunning || state.isCountdownActive) return;
+    soundEngine.init();
+    if (state.elapsedSec >= state.workout.totalDuration) {
+        resetWorkoutSession();
+    }
+    if (!state.hasStartedSession) {
+        beginStartCountdown();
+        return;
+    }
+    beginActiveFlight();
+}
+
 function pauseFlight() {
+    if (state.isCountdownActive) {
+        cancelStartCountdown();
+        state.hasStartedSession = false;
+        state.isRunning = false;
+        state.isAutoPaused = false;
+        syncActionButtonsUI();
+        updateLiveHud();
+        return;
+    }
     if (!state.isRunning && !state.isAutoPaused) return;
     state.isRunning = false;
     state.isAutoPaused = false;
@@ -640,6 +768,7 @@ function pauseFlight() {
 }
 
 function resetWorkoutSession() {
+    cancelStartCountdown();
     state.isRunning = false;
     state.isAutoPaused = false;
     state.hasStartedSession = false;
@@ -683,6 +812,7 @@ function resetWorkoutSession() {
 }
 
 function finishWorkoutAndShowSummary() {
+    cancelStartCountdown();
     const wasAutoStoppedFtpTest = state.ftpTestAutoStopped;
     // Rides finished early via the Finish button are not ranked; an FTP test always ends early
     const isRankedRide = Boolean(state.workout)

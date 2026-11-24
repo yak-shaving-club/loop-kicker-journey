@@ -91,6 +91,14 @@ class ArcadeSoundEngine {
         setTimeout(() => this.playTone(1480, 110, 'square', 0.035), 40);
         setTimeout(() => this.playTone(1180, 90, 'square', 0.03), 130);
     }
+    playCountdownTick(remainingSec) {
+        const freq = remainingSec <= 1 ? 659.25 : 523.25;
+        this.playTone(freq, 120, 'triangle', 0.08);
+    }
+    playCountdownGo() {
+        this.playTone(659.25, 160, 'triangle', 0.09);
+        setTimeout(() => this.playTone(880.0, 260, 'triangle', 0.10), 70);
+    }
     playFinishFanfare() {
         const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((n, idx) => {

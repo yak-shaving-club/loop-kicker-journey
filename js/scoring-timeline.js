@@ -60,6 +60,9 @@ function updateHeaderAndSetupVisibility() {
 
 function setScreen(screenName) {
     const target = VALID_SCREENS.includes(screenName) ? screenName : 'splash';
+    if (target !== 'game' && state.isCountdownActive) {
+        pauseFlight();
+    }
     state.currentScreen = target;
     state.steerLeftPressed = false;
     state.steerRightPressed = false;
