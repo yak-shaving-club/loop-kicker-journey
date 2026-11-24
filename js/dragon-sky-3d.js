@@ -3749,7 +3749,7 @@ class DragonSky3DEngine {
             const normalizedYawRate = this.dragonHeadingVelocity / DRAGON_HEADING_TURN_RATE;
             const headingRelToCanyon = this.dragonHeadingAngle - canyonTangentHeading;
             const autoCourseBank = !state.steeringEnabled
-                ? Math.max(-0.42, Math.min(0.42, -turnDelta * 0.032))
+                ? Math.max(-0.62, Math.min(0.62, -turnDelta * 0.042))
                 : 0;
             const steerVisualRoll = (
                 -steerInput * DRAGON_ROLL_STEER_INPUT_GAIN

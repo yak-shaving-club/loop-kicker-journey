@@ -455,14 +455,14 @@ function canyonHashSigned(index, channel = 0) {
 function computeCanyonStepParams(stepIndex, prevX, prevHeadingSlope) {
     const rLen1 = canyonHashUnit(stepIndex, 1);
     const rLen2 = canyonHashUnit(stepIndex, 2);
-    // Variable segment lengths: short doglegs (95-145), medium curves (145-225), or long sweeps/straights (225-320)
+    // Variable segment lengths: short doglegs (70-115), medium curves (115-180), or long sweeps/straights (180-255)
     let segLenZ;
-    if (rLen1 < 0.30) {
-        segLenZ = 95.0 + rLen2 * 50.0;
-    } else if (rLen1 < 0.72) {
-        segLenZ = 145.0 + rLen2 * 80.0;
+    if (rLen1 < 0.35) {
+        segLenZ = 70.0 + rLen2 * 45.0;
+    } else if (rLen1 < 0.78) {
+        segLenZ = 115.0 + rLen2 * 65.0;
     } else {
-        segLenZ = 225.0 + rLen2 * 95.0;
+        segLenZ = 180.0 + rLen2 * 75.0;
     }
 
     const rMode = canyonHashUnit(stepIndex, 3);
@@ -470,29 +470,29 @@ function computeCanyonStepParams(stepIndex, prevX, prevHeadingSlope) {
     const rMag = canyonHashUnit(stepIndex, 5);
 
     let headingSlope;
-    if (rMode < 0.22) {
+    if (rMode < 0.14) {
         // Straightaway or subtle diagonal canyon drift
-        headingSlope = prevHeadingSlope * 0.20 + (rDir - 0.5) * 0.11;
-    } else if (rMode < 0.58 && Math.abs(prevHeadingSlope) > 0.03) {
+        headingSlope = prevHeadingSlope * 0.15 + (rDir - 0.5) * 0.14;
+    } else if (rMode < 0.42 && Math.abs(prevHeadingSlope) > 0.03) {
         // Compound turn: continue bending in the same direction (avoids regular back-and-forth wave oscillation)
         const sameDir = Math.sign(prevHeadingSlope);
-        const mag = 0.08 + Math.pow(rMag, 0.85) * 0.30;
+        const mag = 0.22 + Math.pow(rMag, 0.80) * 0.44;
         headingSlope = sameDir * mag;
     } else {
         // Independent random turn direction and curvature intensity
         const dir = rDir < 0.5 ? -1.0 : 1.0;
-        const mag = 0.09 + Math.pow(rMag, 0.78) * 0.33;
+        const mag = 0.24 + Math.pow(rMag, 0.72) * 0.44;
         headingSlope = dir * mag;
     }
 
     // Soft boundary guidance only when wandering far from the origin so the canyon can roam freely without drifting to infinity
-    if (Math.abs(prevX) > 175.0) {
+    if (Math.abs(prevX) > 260.0) {
         const pullBackDir = -Math.sign(prevX);
-        const pullStrength = Math.min(1.0, (Math.abs(prevX) - 175.0) / 95.0);
-        headingSlope = headingSlope * (1.0 - 0.65 * pullStrength) + pullBackDir * (0.14 + 0.18 * rMag) * pullStrength;
+        const pullStrength = Math.min(1.0, (Math.abs(prevX) - 260.0) / 120.0);
+        headingSlope = headingSlope * (1.0 - 0.65 * pullStrength) + pullBackDir * (0.24 + 0.28 * rMag) * pullStrength;
     }
 
-    headingSlope = Math.max(-0.42, Math.min(0.42, headingSlope));
+    headingSlope = Math.max(-0.68, Math.min(0.68, headingSlope));
     return { segLenZ, headingSlope };
 }
 
@@ -518,15 +518,15 @@ function recomputeCanyonWaypointTangents() {
             const lenPrev = Math.abs(dzPrev);
             const lenNext = Math.abs(dzNext);
             const weightedSlope = (lenNext * dPrev + lenPrev * dNext) / Math.max(1e-5, lenPrev + lenNext);
-            const tangentJitter = 0.78 + 0.40 * canyonHashUnit(canyonWaypoints[i].idx, 6);
-            canyonWaypoints[i].m = Math.max(-0.45, Math.min(0.45, weightedSlope * tangentJitter));
+            const tangentJitter = 0.85 + 0.35 * canyonHashUnit(canyonWaypoints[i].idx, 6);
+            canyonWaypoints[i].m = Math.max(-0.72, Math.min(0.72, weightedSlope * tangentJitter));
         }
     }
 }
 
 function ensureCanyonWaypointsCoverZ(targetZ) {
     if (canyonWaypoints.length === 0) {
-        canyonWaypoints = [{ idx: 0, z: 0, x: 0, m: 0, headingSlope: (canyonHashSigned(0, 7) * 0.16) }];
+        canyonWaypoints = [{ idx: 0, z: 0, x: 0, m: 0, headingSlope: (canyonHashSigned(0, 7) * 0.28) }];
         canyonMinGeneratedZ = 0;
         canyonMaxGeneratedZ = 0;
     }
@@ -648,8 +648,8 @@ function evaluateCanyonSplineAtZ(worldZ) {
     const splineDxDz = (dh00 * p0.x + dh01 * p1.x) / dz + dh10 * p0.m + dh11 * p1.m;
 
     // Layer non-periodic hashed value noise for organic canyon wall/river meander
-    const n1 = sampleCanyonValueNoise(z, 113.0, 5.6, 11);
-    const n2 = sampleCanyonValueNoise(z, 53.0, 2.0, 17);
+    const n1 = sampleCanyonValueNoise(z, 97.0, 7.8, 11);
+    const n2 = sampleCanyonValueNoise(z, 47.0, 2.6, 17);
 
     return {
         x: splineX + n1.value + n2.value,
