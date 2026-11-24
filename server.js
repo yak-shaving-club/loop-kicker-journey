@@ -13,8 +13,15 @@ const MAX_GHOST_FILE_BYTES = 5 * 1024 * 1024;
 const GHOST_FILE_FORMAT = 'loop-kicker-journey-ghost';
 const GHOST_FILE_VERSION = 2;
 const GHOST_MAX_SECONDS = 6 * 3600;
-const RESISTANCE_MODES = new Set(['easy', 'medium', 'difficult', 'erg']);
+const RESISTANCE_MODES = new Set(['flat', 'hilly', 'erg']);
 const WORKOUT_KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{0,79}$/i;
+
+function normalizeResistanceMode(mode) {
+    if (mode === 'flat' || mode === 'easy') return 'flat';
+    if (mode === 'hilly' || mode === 'medium' || mode === 'difficult' || mode === 'realistic') return 'hilly';
+    if (mode === 'erg') return 'erg';
+    return null;
+}
 
 // Loop Kicker Journey highscores, ranked per workout + terrain (resistance mode)
 const RIDE_SCORES_FILE = path.resolve(ROOT, process.env.LOOP_KICKER_SCORES_FILE || 'data/loop-kicker-journey-scores.json');
@@ -75,7 +82,7 @@ async function listGhostRides() {
                 durationSec: Array.isArray(lastSample) && Number.isFinite(lastSample[0]) ? lastSample[0] + 1 : null,
                 ftp: Number.isFinite(data.ftp) ? data.ftp : null,
                 accuracyToleranceWatts: Number.isFinite(data.accuracyToleranceWatts) ? data.accuracyToleranceWatts : null,
-                resistanceMode: typeof data.resistanceMode === 'string' ? data.resistanceMode : null,
+                resistanceMode: normalizeResistanceMode(data.resistanceMode),
                 avatarType: typeof data.avatarType === 'string' ? data.avatarType : null
             });
         } catch {
@@ -114,10 +121,11 @@ function parseGhostRideUpload(body) {
     } catch {
         return null;
     }
+    const resistanceMode = normalizeResistanceMode(data && data.resistanceMode);
     if (!data || data.format !== GHOST_FILE_FORMAT || data.version !== GHOST_FILE_VERSION
         || typeof data.workoutXml !== 'string' || !data.workoutXml.trim()
         || typeof data.workoutKey !== 'string' || !WORKOUT_KEY_PATTERN.test(data.workoutKey)
-        || !RESISTANCE_MODES.has(data.resistanceMode)
+        || !resistanceMode
         || !Number.isFinite(data.finalScore) || Math.abs(data.finalScore) > 1e9
         || !Array.isArray(data.samples) || data.samples.length === 0 || data.samples.length > GHOST_MAX_SECONDS
         || !data.samples.every((row) => Array.isArray(row) && row.length >= 3 && row.slice(0, 3).every(Number.isFinite))) {
@@ -127,12 +135,12 @@ function parseGhostRideUpload(body) {
     if (!riderName) return null;
     const lastSample = data.samples[data.samples.length - 1];
     return {
-        data: { ...data, riderName },
+        data: { ...data, riderName, resistanceMode },
         entry: {
             riderName,
             workoutKey: data.workoutKey.toLowerCase(),
             workoutName: (typeof data.workoutName === 'string' ? data.workoutName : '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 80) || 'Ghost Ride',
-            resistanceMode: data.resistanceMode,
+            resistanceMode,
             score: Math.round(data.finalScore),
             durationSec: Math.max(0, Math.round(lastSample[0]) + 1),
             ftp: Number.isInteger(data.ftp) ? data.ftp : null,
@@ -148,7 +156,7 @@ function compareRideScores(a, b) {
 }
 
 function isSameRideCategory(entry, workoutKey, resistanceMode) {
-    return entry.workoutKey === workoutKey && entry.resistanceMode === resistanceMode;
+    return entry.workoutKey === workoutKey && normalizeResistanceMode(entry.resistanceMode) === resistanceMode;
 }
 
 async function getFreeGhostFileName(baseName) {
@@ -203,8 +211,8 @@ async function handleRideScoresApi(request, response, url) {
         return;
     }
     const workoutKey = (url.searchParams.get('workoutKey') || '').toLowerCase();
-    const resistanceMode = url.searchParams.get('resistanceMode') || '';
-    if (!WORKOUT_KEY_PATTERN.test(workoutKey) || !RESISTANCE_MODES.has(resistanceMode)) {
+    const resistanceMode = normalizeResistanceMode(url.searchParams.get('resistanceMode') || '');
+    if (!WORKOUT_KEY_PATTERN.test(workoutKey) || !resistanceMode || !RESISTANCE_MODES.has(resistanceMode)) {
         sendJson(response, 400, { error: 'workoutKey and resistanceMode are required.' });
         return;
     }

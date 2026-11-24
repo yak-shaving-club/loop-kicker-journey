@@ -6,21 +6,9 @@ const GHOST_FILE_VERSION = 2;
 // Version 1 samples also stored cumulative distance: [workoutSecond, watts, distanceMeters, score]
 const GHOST_LEGACY_FILE_VERSION = 1;
 const GHOST_MAX_SECONDS = 6 * 3600;
-const GHOST_RESISTANCE_MODES = new Set(['easy', 'medium', 'difficult', 'erg']);
-// Only these modes generate a random wind course; easy/erg are always flat
-const GHOST_WIND_COURSE_MODES = new Set(['medium', 'difficult']);
-
-// Identifies the selected workout for highscores: the preset key, or a hash of a custom .zwo workout
-function getWorkoutKey() {
-    if (state.selectedPresetKey && PRESET_WORKOUTS[state.selectedPresetKey] === state.workoutXml) {
-        return state.selectedPresetKey;
-    }
-    let hash = 0x811c9dc5;
-    for (let i = 0; i < state.workoutXml.length; i++) {
-        hash = Math.imul(hash ^ state.workoutXml.charCodeAt(i), 0x01000193);
-    }
-    return `zwo-${(hash >>> 0).toString(16).padStart(8, '0')}`;
-}
+const GHOST_RESISTANCE_MODES = new Set(['flat', 'hilly', 'erg']);
+// Only Hilly mode has a non-flat terrain profile
+const GHOST_WIND_COURSE_MODES = new Set(['hilly']);
 
 function buildGhostRideFile() {
     return {
@@ -98,7 +86,7 @@ function parseGhostRideFile(text) {
         score[sec] = current[2];
     }
 
-    const resistanceMode = GHOST_RESISTANCE_MODES.has(data.resistanceMode) ? data.resistanceMode : null;
+    const resistanceMode = normalizeResistanceMode(data.resistanceMode);
     const gradientProfile = GHOST_WIND_COURSE_MODES.has(resistanceMode) ? parseGhostWindProfile(data.windProfile) : null;
     const ftp = Number.isInteger(data.ftp) && data.ftp >= 50 && data.ftp <= 600 ? data.ftp : null;
     const avatarType = typeof data.avatarType === 'string' ? data.avatarType : null;
@@ -159,19 +147,23 @@ function updateGhostUI() {
     }
     updateAvatarReadySummaryUI();
     updateGhostHud();
-    syncRerollWindProfileButton();
+    syncResistanceModeLock();
 }
 
-// While the ghost's recorded wind course is in use, rerolling would break the comparison
-function syncRerollWindProfileButton() {
-    const btn = document.getElementById('rerollWindProfileBtn');
-    if (!btn) return;
-    if (!btn.dataset.defaultTitle) btn.dataset.defaultTitle = btn.title;
-    const locked = isGhostWindCourseActive();
-    btn.disabled = locked;
-    btn.classList.toggle('opacity-40', locked);
-    btn.classList.toggle('cursor-not-allowed', locked);
-    btn.title = locked ? 'Wind course is fixed by the loaded ghost ride' : btn.dataset.defaultTitle;
+// Replaying a ghost ride uses the mode it was recorded in (Flat, Hilly, or ERG Lock)
+function syncResistanceModeLock() {
+    const select = document.getElementById('resistanceModeSelect');
+    if (!select) return;
+    const locked = Boolean(state.ghost && state.ghost.resistanceMode !== null);
+    if (locked) {
+        state.resistanceMode = state.ghost.resistanceMode;
+        select.value = state.ghost.resistanceMode;
+    }
+    select.disabled = locked;
+    select.classList.toggle('opacity-60', locked);
+    select.classList.toggle('cursor-not-allowed', locked);
+    select.classList.toggle('cursor-pointer', !locked);
+    select.title = locked ? 'Mode is fixed by the loaded ghost ride' : '';
 }
 
 function updateGhostHud() {
@@ -237,7 +229,7 @@ function loadGhostRideFromText(text) {
 // Ghost Battle (splash screen): ghost rides served by server.js from data/ghostrides
 // -------------------------------------------------------------------------
 const GHOST_RIDES_API_URL = 'api/ghostrides';
-const GHOST_MODE_LABELS = { easy: 'Easy', medium: 'Medium', difficult: 'Difficult', erg: 'ERG Lock' };
+const GHOST_MODE_LABELS = { flat: 'Flat', hilly: 'Hilly', erg: 'ERG Lock' };
 
 async function fetchGhostRideList() {
     const res = await fetch(GHOST_RIDES_API_URL, { cache: 'no-store' });
@@ -284,8 +276,9 @@ const GHOST_RANK_MEDALS = ['🥇', '🥈', '🥉'];
 function buildGhostLeaderboards(rides) {
     const groups = new Map();
     rides.forEach((ride) => {
-        const key = `${ride.workoutKey || ride.workoutName}|${ride.resistanceMode || ''}`;
-        if (!groups.has(key)) groups.set(key, { workoutName: ride.workoutName, resistanceMode: ride.resistanceMode, rides: [] });
+        const mode = normalizeResistanceMode(ride.resistanceMode) || ride.resistanceMode || '';
+        const key = `${ride.workoutKey || ride.workoutName}|${mode}`;
+        if (!groups.has(key)) groups.set(key, { workoutName: ride.workoutName, resistanceMode: mode, rides: [] });
         groups.get(key).rides.push(ride);
     });
     return [...groups.values()]

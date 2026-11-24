@@ -1337,18 +1337,10 @@
                 <div class="flex items-center gap-1.5 bg-gray-950/90 border border-gray-800 rounded-xl px-2.5 py-1.5">
                     <label for="resistanceModeSelect" class="text-xs text-gray-400 font-medium">Mode:</label>
                     <select id="resistanceModeSelect" class="bg-transparent text-xs font-bold text-emerald-400 focus:outline-none cursor-pointer">
-                        <option value="easy" class="bg-gray-900 text-emerald-400" selected>Easy (0% Flat)</option>
-                        <option value="medium" class="bg-gray-900 text-amber-300">Medium (Rolling Hills)</option>
-                        <option value="difficult" class="bg-gray-900 text-rose-400">Difficult (Steep Canyon)</option>
+                        <option value="flat" class="bg-gray-900 text-emerald-400" selected>Flat</option>
+                        <option value="hilly" class="bg-gray-900 text-amber-300">Hilly</option>
                         <option value="erg" class="bg-gray-900 text-cyan-300">ERG Lock</option>
                     </select>
-                    <button id="rerollWindProfileBtn" type="button"
-                            class="ml-0.5 p-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-amber-300 hover:text-amber-200 border border-gray-700 transition cursor-pointer flex items-center justify-center"
-                            title="Generate a new random 3D canyon slope profile for the session">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                    </button>
                 </div>
             </div>
 

@@ -30,15 +30,15 @@ All screenshots in `docs/screenshots/*.png` must adhere to the following exact s
 
 | File | Screen / State | Avatar (`#avatarSelect`) | Resistance (`#resistanceModeSelect`) | Notes |
 |------|----------------|--------------------------|--------------------------------------|-------|
-| `01-start.png` | Splashscreen (`splash` / `#screenSplash`) | `aero_wyvern` | `easy` | Pre-flight Dragon Splashscreen with hero artwork and **Start Setup** CTA (`#splashStartBtn`) |
-| `01-pairing.png` | Step 1: Pairing & Rules (`pairing` / `#screenPairing`) | `aero_wyvern` | `easy` | Bluetooth/wireless pairing cards, `Steering: OFF (Auto-Fly Gates)`, and `Auto-Fly Target Gate` checked |
-| `01-training.png` | Step 2: Training Selection (`training` / `#screenTraining`) | `aero_wyvern` | `easy` | Workout profile preview (`#trainingPreviewCanvas`), FTP, resistance/wind mode, Zwift `.zwo` upload, and preset workout cards |
-| `01-avatar.png` | Step 3: Avatar Selection (`avatar` / `#screenAvatar`) | `aero_wyvern` | `easy` | Live 3D sky preview stage at target-gate altitude, 6 avatar cards, and **Start Flight** CTA (`#avatarStartFlightBtn`) |
-| `02-flight.png` | Active flight (`game` / `#screenGame`) | `aero_wyvern` | `easy` | Active flight through target-watt donut gates |
-| `03-delorean.png` | Active flight (`game` / `#screenGame`) | `delorean` | `medium` | Advanced forward two segments to a higher-watt block |
-| `04-ufo.png` | Active flight (`game` / `#screenGame`) | `mars_ufo` | `medium` | Mars Attacks UFO flying through canyon gates |
-| `05-fuchur.png` | Active flight (`game` / `#screenGame`) | `fuchur` | `easy` | Fuchur (Luckdragon) flying through the donut gates |
-| `05-paramotor.png` | Active flight (`game` / `#screenGame`) | `paramotor` | `easy` | Paramotor pilot under the white/lilac Phi Maestro Light 3 wing |
+| `01-start.png` | Splashscreen (`splash` / `#screenSplash`) | `aero_wyvern` | `flat` | Pre-flight Dragon Splashscreen with hero artwork and **Start Setup** CTA (`#splashStartBtn`) |
+| `01-pairing.png` | Step 1: Pairing & Rules (`pairing` / `#screenPairing`) | `aero_wyvern` | `flat` | Bluetooth/wireless pairing cards, `Steering: OFF (Auto-Fly Gates)`, and `Auto-Fly Target Gate` checked |
+| `01-training.png` | Step 2: Training Selection (`training` / `#screenTraining`) | `aero_wyvern` | `flat` | Workout profile preview (`#trainingPreviewCanvas`), FTP, resistance/wind mode, Zwift `.zwo` upload, and preset workout cards |
+| `01-avatar.png` | Step 3: Avatar Selection (`avatar` / `#screenAvatar`) | `aero_wyvern` | `flat` | Live 3D sky preview stage at target-gate altitude, 6 avatar cards, and **Start Flight** CTA (`#avatarStartFlightBtn`) |
+| `02-flight.png` | Active flight (`game` / `#screenGame`) | `aero_wyvern` | `flat` | Active flight through target-watt donut gates |
+| `03-delorean.png` | Active flight (`game` / `#screenGame`) | `delorean` | `hilly` | Advanced forward two segments to a higher-watt block |
+| `04-ufo.png` | Active flight (`game` / `#screenGame`) | `mars_ufo` | `hilly` | Mars Attacks UFO flying through canyon gates |
+| `05-fuchur.png` | Active flight (`game` / `#screenGame`) | `fuchur` | `flat` | Fuchur (Luckdragon) flying through the donut gates |
+| `05-paramotor.png` | Active flight (`game` / `#screenGame`) | `paramotor` | `flat` | Paramotor pilot under the white/lilac Phi Maestro Light 3 wing |
 | `06-summary.png` | Post-flight (`summary` / `#summaryModal`) | any | any | Workout Summary screen (`#finishWorkoutBtn` clicked last) with rank, metrics, and `.fit` / `.png` export |
 
 ## Step-by-Step Workflow

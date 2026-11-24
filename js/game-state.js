@@ -17,7 +17,7 @@ const state = {
     avatarType: 'aero_wyvern',
     ftp: 200,
     donutVisualSizeBoost: 1.0,
-    resistanceMode: 'easy',
+    resistanceMode: 'flat',
     currentGradientPct: 0.0,
     targetGradientPct: 0.0,
     gradientProfile: [],
@@ -142,22 +142,66 @@ function getGateSpacingZForGrade(gradientPct = 0) {
     );
 }
 
-function generateTerrainGradientProfile(totalDurationSec, mode) {
-    const total = Math.max(1, Math.ceil(totalDurationSec));
-    const grades = [];
-    let current = 0.0;
-    let target = 0.0;
-    let ticksRemaining = 0;
+function normalizeResistanceMode(mode) {
+    if (mode === 'flat' || mode === 'easy') return 'flat';
+    if (mode === 'hilly' || mode === 'medium' || mode === 'difficult' || mode === 'realistic') return 'hilly';
+    if (mode === 'erg') return 'erg';
+    return null;
+}
 
-    for (let s = 0; s <= total; s++) {
-        if (mode === 'easy' || mode === 'erg') {
-            current = 0.0;
-            target = 0.0;
-            ticksRemaining = 0;
-        } else if (mode === 'medium' || mode === 'realistic') {
+// Identifies the selected workout: preset key, or a hash of a custom .zwo workout
+function getWorkoutKey() {
+    if (state.selectedPresetKey && PRESET_WORKOUTS[state.selectedPresetKey] === state.workoutXml) {
+        return state.selectedPresetKey;
+    }
+    const xml = typeof state.workoutXml === 'string' ? state.workoutXml : '';
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < xml.length; i++) {
+        hash = Math.imul(hash ^ xml.charCodeAt(i), 0x01000193);
+    }
+    return `zwo-${(hash >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+function hashStringToSeed(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 0x01000193);
+    }
+    return h >>> 0;
+}
+
+function createSeededRandom(seed) {
+    let a = seed >>> 0;
+    return function () {
+        a = (a + 0x6d2b79f5) >>> 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+// Generated once per workout so Hilly terrain stays identical when the same workout is used again
+const hillyTerrainCache = new Map();
+
+function generateTerrainGradientProfile(totalDurationSec, mode, workoutKey = '') {
+    const total = Math.max(1, Math.ceil(totalDurationSec));
+    const normalizedMode = normalizeResistanceMode(mode) || 'flat';
+
+    if (normalizedMode === 'hilly') {
+        const cacheKey = `${workoutKey}|${total}`;
+        if (hillyTerrainCache.has(cacheKey)) {
+            return hillyTerrainCache.get(cacheKey);
+        }
+        const rng = createSeededRandom(hashStringToSeed(workoutKey || 'default-hilly'));
+        const grades = [];
+        let current = 0.0;
+        let target = 0.0;
+        let ticksRemaining = 0;
+
+        for (let s = 0; s <= total; s++) {
             if (ticksRemaining <= 0) {
-                ticksRemaining = 20 + Math.floor(Math.random() * 18);
-                const delta = (Math.random() - 0.46) * 7.0;
+                ticksRemaining = 20 + Math.floor(rng() * 18);
+                const delta = (rng() - 0.46) * 7.0;
                 target = Math.max(-5.0, Math.min(10.0, +(target + delta).toFixed(1)));
             }
             ticksRemaining -= 1;
@@ -168,22 +212,16 @@ function generateTerrainGradientProfile(totalDurationSec, mode) {
             } else {
                 current = +(current + Math.sign(diff) * maxStep).toFixed(2);
             }
-        } else if (mode === 'difficult') {
-            if (ticksRemaining <= 0) {
-                ticksRemaining = 6 + Math.floor(Math.random() * 7);
-                const rawTarget = -5.0 + Math.random() * 15.0;
-                target = Math.max(-5.0, Math.min(10.0, +rawTarget.toFixed(1)));
-            }
-            ticksRemaining -= 1;
-            const diff = target - current;
-            const maxStep = 0.85;
-            if (Math.abs(diff) <= maxStep) {
-                current = target;
-            } else {
-                current = +(current + Math.sign(diff) * maxStep).toFixed(2);
-            }
+            grades.push([current, target]);
         }
-        grades.push([current, target]);
+        const profile = buildGradientProfileFromGrades(grades);
+        hillyTerrainCache.set(cacheKey, profile);
+        return profile;
+    }
+
+    const grades = [];
+    for (let s = 0; s <= total; s++) {
+        grades.push([0.0, 0.0]);
     }
     return buildGradientProfileFromGrades(grades);
 }
@@ -212,7 +250,7 @@ function isGhostWindCourseActive() {
 
 function buildSessionGradientProfile() {
     if (isGhostWindCourseActive()) return state.ghost.gradientProfile;
-    return generateTerrainGradientProfile(state.workout.totalDuration, state.resistanceMode);
+    return generateTerrainGradientProfile(state.workout.totalDuration, state.resistanceMode, getWorkoutKey());
 }
 
 /**

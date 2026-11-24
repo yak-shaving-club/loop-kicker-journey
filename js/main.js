@@ -487,12 +487,11 @@ function regenerateSessionWindProfile() {
 }
 
 document.getElementById('resistanceModeSelect').addEventListener('change', (e) => {
-    state.resistanceMode = e.target.value;
-    regenerateSessionWindProfile();
-    syncRerollWindProfileButton();
-});
-
-document.getElementById('rerollWindProfileBtn').addEventListener('click', () => {
+    if (state.ghost && state.ghost.resistanceMode !== null) {
+        e.target.value = state.ghost.resistanceMode;
+        return;
+    }
+    state.resistanceMode = normalizeResistanceMode(e.target.value) || 'flat';
     regenerateSessionWindProfile();
 });
 
@@ -708,13 +707,11 @@ function drawBottomTimelineOverlayOnScreenshot(ctx, width, height, pxRatio) {
 
     // Resistance Mode & Slope / ERG Pill
     const shortModeLabels = {
-        easy: 'Easy',
-        medium: 'Medium',
-        realistic: 'Medium',
-        difficult: 'Difficult',
+        flat: 'Flat',
+        hilly: 'Hilly',
         erg: 'ERG Lock'
     };
-    const modeLabel = shortModeLabels[state.resistanceMode] || 'Easy';
+    const modeLabel = shortModeLabels[state.resistanceMode] || 'Flat';
     const targetWatts = getTargetWattsAtSecond(state.workout, state.elapsedSec, state.ftp);
     const gradSign = state.currentGradientPct > 0 ? '+' : '';
     const targetGradSign = state.targetGradientPct > 0 ? '+' : '';

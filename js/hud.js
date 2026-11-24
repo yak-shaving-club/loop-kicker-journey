@@ -30,26 +30,22 @@ function updateLiveHud() {
     if (targetGradEl) targetGradEl.textContent = formattedTarget;
 
     const modeLabels = {
-        easy: 'Easy (0% Flat)',
-        medium: 'Medium (Rolling Hills)',
-        realistic: 'Medium (Rolling Hills)',
-        difficult: 'Difficult (Steep Canyon)',
+        flat: 'Flat',
+        hilly: 'Hilly',
         erg: 'ERG Lock'
     };
     const shortModeLabels = {
-        easy: 'Easy',
-        medium: 'Medium',
-        realistic: 'Medium',
-        difficult: 'Difficult',
+        flat: 'Flat',
+        hilly: 'Hilly',
         erg: 'ERG Lock'
     };
     const gradModeTagEl = document.getElementById('gradientModeTag');
-    if (gradModeTagEl) gradModeTagEl.textContent = modeLabels[state.resistanceMode] || 'Easy (0% Flat)';
+    if (gradModeTagEl) gradModeTagEl.textContent = modeLabels[state.resistanceMode] || 'Flat';
 
     const tlTitleEl = document.getElementById('timelineWorkoutTitle');
     if (tlTitleEl && state.workout) tlTitleEl.textContent = state.workout.name;
     const tlModeEl = document.getElementById('timelineResistanceModeBadge');
-    if (tlModeEl) tlModeEl.textContent = shortModeLabels[state.resistanceMode] || 'Easy';
+    if (tlModeEl) tlModeEl.textContent = shortModeLabels[state.resistanceMode] || 'Flat';
     const tlValEl = document.getElementById('timelineResistanceValue');
     if (tlValEl) tlValEl.textContent = state.resistanceMode === 'erg' ? `${targetWatts}W` : formattedSlope;
     const tlTargetEl = document.getElementById('timelineResistanceTarget');

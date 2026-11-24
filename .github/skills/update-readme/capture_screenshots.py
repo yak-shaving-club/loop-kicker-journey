@@ -483,7 +483,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            resistance="easy",
+            resistance="flat",
             ensure_started=False,
             expected_screen="splash",
         )
@@ -496,7 +496,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            resistance="easy",
+            resistance="flat",
             ensure_started=False,
             expected_screen="pairing",
         )
@@ -509,7 +509,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            resistance="easy",
+            resistance="flat",
             ensure_started=False,
             expected_screen="training",
         )
@@ -522,7 +522,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            resistance="easy",
+            resistance="flat",
             ensure_started=False,
             expected_screen="avatar",
         )
@@ -534,7 +534,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="aero_wyvern",
-            resistance="easy",
+            resistance="flat",
             ensure_started=True,
             freeze_forward_velocity=True,
             expected_screen="game",
@@ -572,7 +572,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="delorean",
-            resistance="medium",
+            resistance="hilly",
             ensure_started=True,
             freeze_forward_velocity=True,
             expected_screen="game",
@@ -585,7 +585,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="mars_ufo",
-            resistance="medium",
+            resistance="hilly",
             ensure_started=True,
             freeze_forward_velocity=True,
             expected_screen="game",
@@ -598,7 +598,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="fuchur",
-            resistance="easy",
+            resistance="flat",
             ensure_started=True,
             freeze_forward_velocity=True,
             expected_screen="game",
@@ -611,7 +611,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="paramotor",
-            resistance="easy",
+            resistance="flat",
             ensure_started=True,
             freeze_forward_velocity=True,
             expected_screen="game",
@@ -623,7 +623,7 @@ def main():
         configure_flight_controls(
             cdp,
             avatar="paramotor",
-            resistance="easy",
+            resistance="flat",
             ensure_started=True,
             freeze_forward_velocity=False,
             expected_screen="game",
