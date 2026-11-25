@@ -157,10 +157,6 @@ function isTextEntryTarget(target) {
 // Spacebar handler to destroy incoming 3D obstacles with Dragon Fire & Left/Right keyboard bindings to steer the dragon
 window.addEventListener('keydown', (e) => {
     if (isTextEntryTarget(e.target)) return;
-    if (isGhostBattlePanelOpen()) {
-        if (e.code === 'Escape') closeGhostBattlePanel();
-        return;
-    }
     if (state.currentScreen === 'splash' && (e.code === 'Enter' || e.code === 'Space')) {
         e.preventDefault();
         soundEngine.init();
@@ -947,14 +943,6 @@ document.getElementById('splashStartBtn').addEventListener('click', () => {
     soundEngine.init();
     setScreen('pairing');
 });
-document.getElementById('splashGhostBattleBtn').addEventListener('click', () => {
-    openGhostBattlePanel();
-});
-document.getElementById('ghostBattleCloseBtn').addEventListener('click', closeGhostBattlePanel);
-document.getElementById('ghostBattlePanel').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeGhostBattlePanel();
-});
-initGhostBattleButton();
 document.getElementById('wizardReturnToGameBtn').addEventListener('click', () => {
     setScreen('game');
 });

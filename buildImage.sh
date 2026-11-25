@@ -1,1 +1,1 @@
-docker buildx build --no-cache --push --platform linux/amd64 --tag jonitooo/loop-kicker-journey:1.2.0 --tag jonitooo/loop-kicker-journey:latest .
+docker buildx build --no-cache --push --platform linux/amd64 --tag jonitooo/loop-kicker-journey:1.2.1 --tag jonitooo/loop-kicker-journey:latest .

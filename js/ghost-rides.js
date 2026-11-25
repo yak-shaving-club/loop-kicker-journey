@@ -131,23 +131,15 @@ function spawnGhostCollectedPoints() {
 }
 
 function updateGhostUI() {
-    const chip = document.getElementById('ghostStatusChip');
-    const label = document.getElementById('ghostStatusLabel');
     const hudRow = document.getElementById('ghostHudRow');
     const hasGhost = Boolean(state.ghost);
-    chip.classList.toggle('hidden', !hasGhost);
-    chip.classList.toggle('flex', hasGhost);
+    document.getElementById('clearGhostBtn').classList.toggle('hidden', !hasGhost);
     hudRow.classList.toggle('hidden', !hasGhost);
     hudRow.classList.toggle('flex', hasGhost);
-    if (hasGhost) {
-        const recorded = state.ghost.recordedAt ? new Date(state.ghost.recordedAt) : null;
-        const dateText = recorded && !isNaN(recorded) ? ` · ${recorded.toLocaleDateString()}` : '';
-        label.textContent = `Ghost: ${formatSwissNumber(state.ghost.finalScore)} pts${dateText}`;
-        chip.title = `Racing against a ghost ride of "${state.ghost.name}"${dateText}`;
-    }
     updateAvatarReadySummaryUI();
     updateGhostHud();
     syncResistanceModeLock();
+    renderWorkoutGhostRides();
 }
 
 // Replaying a ghost ride uses the mode it was recorded in (Flat, Hilly, or ERG Lock)
@@ -205,15 +197,28 @@ function setGhostRide(ghost) {
 }
 
 function clearGhostRide() {
+    const hadGhostFtp = Boolean(state.ghost && state.ghost.ftp !== null);
     setGhostRide(null);
+    if (hadGhostFtp) restoreRiderFtp();
+}
+
+// A ghost race temporarily uses the ghost's FTP; afterwards the rider's own (saved) FTP applies again
+function restoreRiderFtp() {
+    const savedFtp = parseInt(localStorage.getItem('loop_kicker_journey_ftp'), 10);
+    const ftp = !isNaN(savedFtp) && savedFtp >= 50 && savedFtp <= 600 ? savedFtp : 200;
+    document.getElementById('ftpInput').value = ftp;
+    applyFtpWatts(ftp, false);
 }
 
 function selectPresetMatchingXml(xmlString) {
     return Object.keys(PRESET_WORKOUTS).find((key) => PRESET_WORKOUTS[key] === xmlString) || null;
 }
 
-function loadGhostRideFromText(text) {
+// Loads the ghost with its recorded workout, Mode, wind course and FTP
+function loadGhostRideFromText(text, fileName = null) {
+    if (state.hasStartedSession) resetWorkoutSession();
     const ghost = parseGhostRideFile(text);
+    ghost.file = fileName;
     const presetKey = selectPresetMatchingXml(ghost.workoutXml);
     if (ghost.resistanceMode !== null) {
         state.resistanceMode = ghost.resistanceMode;
@@ -223,13 +228,27 @@ function loadGhostRideFromText(text) {
     setGhostRide(ghost);
     // Picks up the ghost's wind course now that the ghost is set
     regenerateSessionWindProfile();
+    if (ghost.ftp !== null) {
+        // Only for this session: the rider's own saved FTP stays untouched
+        document.getElementById('ftpInput').value = ghost.ftp;
+        applyFtpWatts(ghost.ftp, false);
+    }
 }
 
 // -------------------------------------------------------------------------
-// Ghost Battle (splash screen): ghost rides served by server.js from data/ghostrides
+// Best scores & ghost rides of the selected workout (Training Selection), served by server.js
 // -------------------------------------------------------------------------
 const GHOST_RIDES_API_URL = 'api/ghostrides';
 const GHOST_MODE_LABELS = { flat: 'Flat', hilly: 'Hilly', erg: 'ERG Lock' };
+const GHOST_MODE_ORDER = ['flat', 'hilly', 'erg'];
+const GHOST_LEADERBOARD_SIZE = 3;
+const GHOST_RANK_MEDALS = ['🥇', '🥈', '🥉'];
+
+let ghostRideListPromise = null;
+// Workouts with saved ghost rides, for the ghost icon on the workout cards
+let ghostRideIndex = null;
+// Ignores ghost list responses that arrive after a newer workout selection
+let workoutGhostRenderToken = 0;
 
 async function fetchGhostRideList() {
     const res = await fetch(GHOST_RIDES_API_URL, { cache: 'no-store' });
@@ -238,58 +257,70 @@ async function fetchGhostRideList() {
     return Array.isArray(data.ghostRides) ? data.ghostRides : [];
 }
 
-// The button only makes sense when server.js is running (not for file:// or plain static hosting)
-async function initGhostBattleButton() {
-    const btn = document.getElementById('splashGhostBattleBtn');
-    if (!btn || !/^https?:$/.test(window.location.protocol)) return;
-    try {
-        await fetchGhostRideList();
-        btn.classList.remove('hidden');
-        btn.classList.add('flex');
-    } catch {
-        // No ghost ride API available — keep the button hidden
+function getGhostRideList(forceReload = false) {
+    if (forceReload || !ghostRideListPromise) {
+        ghostRideListPromise = fetchGhostRideList()
+            .then((rides) => {
+                updateGhostRideIndex(rides);
+                return rides;
+            })
+            .catch((err) => {
+                ghostRideListPromise = null;
+                throw err;
+            });
     }
+    return ghostRideListPromise;
 }
 
-function isGhostBattlePanelOpen() {
-    const panel = document.getElementById('ghostBattlePanel');
-    return Boolean(panel) && !panel.classList.contains('hidden');
-}
-
-function closeGhostBattlePanel() {
-    const panel = document.getElementById('ghostBattlePanel');
-    panel.classList.add('hidden');
-    panel.classList.remove('flex');
-    document.getElementById('splashGhostBattleBtn').focus();
-}
-
-function setGhostBattleStatus(text, isError = false) {
-    const statusEl = document.getElementById('ghostBattleStatus');
-    statusEl.textContent = text;
-    statusEl.className = `text-xs mt-3 ${isError ? 'text-blue-300' : 'text-gray-400'}`;
-}
-
-const GHOST_LEADERBOARD_SIZE = 3;
-const GHOST_RANK_MEDALS = ['🥇', '🥈', '🥉'];
-
-// Best GHOST_LEADERBOARD_SIZE ghost rides per workout + terrain, groups ordered by workout name
-function buildGhostLeaderboards(rides) {
-    const groups = new Map();
+function updateGhostRideIndex(rides) {
+    const keys = new Set();
+    // Older ghost files without workoutKey are matched by workout name
+    const names = new Set();
     rides.forEach((ride) => {
-        const mode = normalizeResistanceMode(ride.resistanceMode) || ride.resistanceMode || '';
-        const key = `${ride.workoutKey || ride.workoutName}|${mode}`;
-        if (!groups.has(key)) groups.set(key, { workoutName: ride.workoutName, resistanceMode: mode, rides: [] });
-        groups.get(key).rides.push(ride);
+        if (ride.workoutKey) keys.add(ride.workoutKey.toLowerCase());
+        else if (ride.workoutName) names.add(ride.workoutName);
     });
-    return [...groups.values()]
-        .map((group) => ({
-            ...group,
-            rides: group.rides
+    ghostRideIndex = { keys, names };
+    renderPresetWorkoutCards();
+}
+
+function hasGhostRideForWorkout(presetKey, workout) {
+    if (!ghostRideIndex) return false;
+    return ghostRideIndex.keys.has(String(presetKey).toLowerCase()) || ghostRideIndex.names.has(workout.name);
+}
+
+function createGhostAvailableIcon() {
+    const icon = document.createElement('span');
+    icon.className = 'text-xs leading-none';
+    icon.setAttribute('role', 'img');
+    icon.setAttribute('aria-label', 'Ghost rides available');
+    icon.title = 'Ghost rides available';
+    icon.textContent = '👻';
+    return icon;
+}
+
+function isRideOfSelectedWorkout(ride) {
+    if (ride.workoutKey) return ride.workoutKey.toLowerCase() === getWorkoutKey().toLowerCase();
+    return Boolean(state.workout) && ride.workoutName === state.workout.name;
+}
+
+// Best GHOST_LEADERBOARD_SIZE rides of the selected workout per terrain Mode
+function buildWorkoutGhostLeaderboards(rides) {
+    const groups = new Map();
+    rides.filter(isRideOfSelectedWorkout).forEach((ride) => {
+        const mode = normalizeResistanceMode(ride.resistanceMode) || ride.resistanceMode || '';
+        if (!groups.has(mode)) groups.set(mode, []);
+        groups.get(mode).push(ride);
+    });
+    const modeRank = (mode) => (GHOST_MODE_ORDER.includes(mode) ? GHOST_MODE_ORDER.indexOf(mode) : GHOST_MODE_ORDER.length);
+    return [...groups.entries()]
+        .map(([resistanceMode, modeRides]) => ({
+            resistanceMode,
+            rides: modeRides
                 .sort((a, b) => (b.finalScore ?? -Infinity) - (a.finalScore ?? -Infinity))
                 .slice(0, GHOST_LEADERBOARD_SIZE)
         }))
-        .sort((a, b) => a.workoutName.localeCompare(b.workoutName)
-            || String(a.resistanceMode).localeCompare(String(b.resistanceMode)));
+        .sort((a, b) => modeRank(a.resistanceMode) - modeRank(b.resistanceMode));
 }
 
 function describeGhostRide(ride) {
@@ -303,111 +334,107 @@ function describeGhostRide(ride) {
     return parts.join(' · ');
 }
 
-function renderGhostBattleList(rides) {
-    const listEl = document.getElementById('ghostBattleList');
+function setWorkoutGhostStatus(text, isError = false) {
+    const statusEl = document.getElementById('workoutGhostStatus');
+    statusEl.textContent = text;
+    statusEl.className = `text-[11px] truncate ${isError ? 'text-blue-300' : 'text-gray-400'}`;
+}
+
+function createWorkoutGhostRideButton(ride, idx) {
+    const isSelected = Boolean(state.ghost && ride.file && state.ghost.file === ride.file);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('aria-pressed', String(isSelected));
+    btn.title = isSelected ? 'Click again to ride without this ghost' : 'Race against this ride as ghost';
+    btn.className = `w-full text-left rounded-xl px-2.5 py-2 border transition cursor-pointer flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-wait ${isSelected
+        ? 'bg-blue-500/20 border-blue-400 shadow-md shadow-blue-500/15'
+        : 'bg-gray-950/80 hover:bg-blue-500/10 border-gray-800 hover:border-blue-400/50'}`;
+
+    const medalEl = document.createElement('span');
+    medalEl.className = 'shrink-0 text-base leading-none';
+    medalEl.textContent = GHOST_RANK_MEDALS[idx];
+    medalEl.setAttribute('aria-label', `Rank ${idx + 1}`);
+
+    const textEl = document.createElement('div');
+    textEl.className = 'min-w-0 flex-1';
+    const riderEl = document.createElement('div');
+    riderEl.className = 'text-xs font-bold text-white truncate';
+    riderEl.textContent = ride.riderName || 'Unknown rider';
+    const detailEl = document.createElement('div');
+    detailEl.className = 'text-[10px] text-gray-400 truncate';
+    detailEl.textContent = describeGhostRide(ride);
+    textEl.append(riderEl, detailEl);
+
+    const scoreEl = document.createElement('div');
+    scoreEl.className = 'shrink-0 text-right font-mono font-black text-blue-200 text-xs';
+    scoreEl.textContent = ride.finalScore !== null ? `${formatSwissNumber(ride.finalScore)} pts` : '';
+    if (isSelected) {
+        const badgeEl = document.createElement('div');
+        badgeEl.className = 'text-[9px] font-sans font-black uppercase tracking-wider text-blue-300';
+        badgeEl.textContent = '👻 Ghost';
+        scoreEl.appendChild(badgeEl);
+    }
+
+    btn.append(medalEl, textEl, scoreEl);
+    btn.addEventListener('click', () => toggleWorkoutGhostRide(ride, isSelected));
+    return btn;
+}
+
+// Shows the top rides of the selected workout per Mode; the section stays hidden without server.js
+async function renderWorkoutGhostRides(forceReload = false) {
+    const section = document.getElementById('workoutGhostSection');
+    if (!section || !state.workout || !/^https?:$/.test(window.location.protocol)) return;
+    const token = ++workoutGhostRenderToken;
+    let rides;
+    try {
+        rides = await getGhostRideList(forceReload);
+    } catch {
+        if (token === workoutGhostRenderToken) section.classList.add('hidden');
+        return;
+    }
+    if (token !== workoutGhostRenderToken) return;
+    section.classList.remove('hidden');
+
+    const listEl = document.getElementById('workoutGhostList');
     listEl.replaceChildren();
-    buildGhostLeaderboards(rides).forEach((group) => {
-        const groupEl = document.createElement('li');
-        groupEl.className = 'rounded-2xl bg-gray-900/60 border border-gray-800 p-2.5';
-
-        const headerEl = document.createElement('div');
-        headerEl.className = 'flex items-center justify-between gap-2 px-1 pb-1.5';
-        const nameEl = document.createElement('div');
-        nameEl.className = 'text-sm font-black text-white truncate';
-        nameEl.textContent = group.workoutName;
+    const groups = buildWorkoutGhostLeaderboards(rides);
+    if (groups.length === 0) {
+        const emptyEl = document.createElement('p');
+        emptyEl.className = 'col-span-full text-xs text-gray-400';
+        emptyEl.textContent = 'No saved rides for this workout yet — finish it and save your score to set the first ghost.';
+        listEl.appendChild(emptyEl);
+        setWorkoutGhostStatus('');
+        return;
+    }
+    groups.forEach((group) => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'flex flex-col gap-1.5';
         const modeEl = document.createElement('span');
-        modeEl.className = 'shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/40 text-blue-300';
+        modeEl.className = 'self-start text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/40 text-blue-300';
         modeEl.textContent = GHOST_MODE_LABELS[group.resistanceMode] || group.resistanceMode || 'Unknown Mode';
-        headerEl.append(nameEl, modeEl);
-
-        const ranksEl = document.createElement('ol');
-        ranksEl.className = 'flex flex-col gap-1';
-        group.rides.forEach((ride, idx) => {
-            const itemEl = document.createElement('li');
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'w-full text-left rounded-xl px-3 py-2 bg-gray-950/80 hover:bg-blue-500/10 border border-gray-800 hover:border-blue-400/50 transition cursor-pointer flex items-center gap-3';
-
-            const medalEl = document.createElement('span');
-            medalEl.className = 'shrink-0 text-lg leading-none';
-            medalEl.textContent = GHOST_RANK_MEDALS[idx];
-            medalEl.setAttribute('aria-label', `Rank ${idx + 1}`);
-
-            const textEl = document.createElement('div');
-            textEl.className = 'min-w-0 flex-1';
-            const riderEl = document.createElement('div');
-            riderEl.className = 'text-sm font-bold text-white truncate';
-            riderEl.textContent = ride.riderName || 'Unknown rider';
-            const detailEl = document.createElement('div');
-            detailEl.className = 'text-[11px] text-gray-400 truncate';
-            detailEl.textContent = describeGhostRide(ride);
-            textEl.append(riderEl, detailEl);
-
-            const scoreEl = document.createElement('div');
-            scoreEl.className = 'shrink-0 text-right font-mono font-black text-blue-200 text-sm';
-            scoreEl.textContent = ride.finalScore !== null ? `${formatSwissNumber(ride.finalScore)} pts` : '';
-
-            btn.append(medalEl, textEl, scoreEl);
-            btn.addEventListener('click', () => startGhostBattleFromFile(ride.file, btn));
-            itemEl.appendChild(btn);
-            ranksEl.appendChild(itemEl);
-        });
-
-        groupEl.append(headerEl, ranksEl);
+        groupEl.appendChild(modeEl);
+        group.rides.forEach((ride, idx) => groupEl.appendChild(createWorkoutGhostRideButton(ride, idx)));
         listEl.appendChild(groupEl);
     });
+    setWorkoutGhostStatus(state.ghost ? '' : '— pick a ride to race it as ghost (optional)');
 }
 
-async function openGhostBattlePanel() {
-    const panel = document.getElementById('ghostBattlePanel');
-    panel.classList.remove('hidden');
-    panel.classList.add('flex');
-    document.getElementById('ghostBattleList').replaceChildren();
-    setGhostBattleStatus('Loading ghost rides…');
-    try {
-        const rides = await fetchGhostRideList();
-        renderGhostBattleList(rides);
-        setGhostBattleStatus(rides.length
-            ? `Top ${GHOST_LEADERBOARD_SIZE} per workout & mode — pick a ghost to start the battle.`
-            : 'No ghost rides yet. Finish a workout and save your score & ghost in the summary.');
-        const firstBtn = document.querySelector('#ghostBattleList button');
-        (firstBtn || document.getElementById('ghostBattleCloseBtn')).focus();
-    } catch (err) {
-        setGhostBattleStatus(`Could not load the ghost rides: ${err.message}`, true);
+async function toggleWorkoutGhostRide(ride, isSelected) {
+    if (isSelected) {
+        clearGhostRide();
+        return;
     }
-}
-
-async function startGhostBattleFromFile(fileName, btn) {
-    document.querySelectorAll('#ghostBattleList button').forEach((b) => { b.disabled = true; });
-    setGhostBattleStatus('Loading ghost ride…');
+    const buttons = document.querySelectorAll('#workoutGhostList button');
+    buttons.forEach((b) => { b.disabled = true; });
+    setWorkoutGhostStatus('Loading ghost ride…');
     try {
-        const res = await fetch(`${GHOST_RIDES_API_URL}/${encodeURIComponent(fileName)}`, { cache: 'no-store' });
+        const res = await fetch(`${GHOST_RIDES_API_URL}/${encodeURIComponent(ride.file)}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        startGhostBattle(await res.text());
+        loadGhostRideFromText(await res.text(), ride.file);
     } catch (err) {
-        document.querySelectorAll('#ghostBattleList button').forEach((b) => { b.disabled = false; });
-        setGhostBattleStatus(`Could not start the ghost battle: ${err.message}`, true);
-        if (btn) btn.focus();
+        buttons.forEach((b) => { b.disabled = false; });
+        setWorkoutGhostStatus(`Could not load the ghost ride: ${err.message}`, true);
     }
-}
-
-// Loads the ghost with its recorded settings and opens the avatar selection before the flight
-function startGhostBattle(text) {
-    if (state.hasStartedSession) resetWorkoutSession();
-    // Workout, Mode & wind course
-    loadGhostRideFromText(text);
-    const ghost = state.ghost;
-    if (ghost.ftp !== null) {
-        // Only for this session: the rider's own saved FTP stays untouched
-        document.getElementById('ftpInput').value = ghost.ftp;
-        applyFtpWatts(ghost.ftp, false);
-    }
-
-    const panel = document.getElementById('ghostBattlePanel');
-    panel.classList.add('hidden');
-    panel.classList.remove('flex');
-    soundEngine.init();
-    setScreen('avatar');
 }
 
 const RIDER_NAME_STORAGE_KEY = 'loop_kicker_journey_rider_name';
@@ -514,6 +541,7 @@ async function saveRideToServer() {
         document.querySelector('label[for="summaryRiderNameInput"]').classList.add('hidden');
         renderLeaderboardRank({ rank: result.rank, total: result.total, top: result.top, saved: true, ownEntry: result.entry });
         setRideSaveStatus('');
+        renderWorkoutGhostRides(true);
     } catch (err) {
         input.disabled = false;
         btn.disabled = false;

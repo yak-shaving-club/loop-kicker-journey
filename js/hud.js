@@ -1076,7 +1076,15 @@ function renderPresetWorkoutCards() {
         durSpan.className = 'px-1.5 py-0.5 rounded bg-gray-950 border border-gray-800 text-[10px] font-mono font-bold text-blue-300 shrink-0 whitespace-nowrap';
         durSpan.textContent = formatDuration(workout.totalDuration);
         topRow.appendChild(titleSpan);
-        topRow.appendChild(durSpan);
+        if (hasGhostRideForWorkout(key, workout)) {
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'flex items-center gap-1 shrink-0';
+            metaDiv.appendChild(createGhostAvailableIcon());
+            metaDiv.appendChild(durSpan);
+            topRow.appendChild(metaDiv);
+        } else {
+            topRow.appendChild(durSpan);
+        }
 
         const descP = document.createElement('p');
         descP.className = 'text-[11px] text-gray-400 line-clamp-2 leading-snug';
@@ -1128,4 +1136,5 @@ function loadWorkoutFromXml(xmlString, presetKey = null) {
     if (zwoBadge) zwoBadge.classList.toggle('hidden', Boolean(presetKey));
     renderPresetWorkoutCards();
     resetWorkoutSession();
+    renderWorkoutGhostRides();
 }
