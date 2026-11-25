@@ -450,10 +450,10 @@ const RIDE_SCORES_API_URL = 'api/loop-kicker-journey/scores';
 // Ignores leaderboard responses of an earlier summary or one that arrives after saving
 let rideLeaderboardToken = 0;
 
-// Score & ghost saving needs server.js and a completely flown workout
-function prepareRideSaveForm(isRankedRide) {
+// Score & ghost saving needs server.js; every ride can be saved, also one ended early with End Race
+function prepareRideSaveForm() {
     const form = document.getElementById('summaryRideSaveSection');
-    const canSave = isRankedRide && /^https?:$/.test(window.location.protocol);
+    const canSave = /^https?:$/.test(window.location.protocol);
     form.classList.toggle('hidden', !canSave);
     form.classList.toggle('flex', canSave);
     rideLeaderboardToken += 1;
@@ -490,6 +490,7 @@ function renderLeaderboardRank({ rank, total, top, saved, ownEntry = null }) {
     document.getElementById('summaryLeaderboardLabel').textContent = saved ? 'Saved · Your Rank' : 'Your Rank · not saved yet';
     document.getElementById('summaryLeaderboardMedal').textContent = (rank && GHOST_RANK_MEDALS[rank - 1]) || '🏁';
     document.getElementById('summaryLeaderboardRankValue').textContent = rank ? `Rank #${rank} of ${total}` : 'Rank #–';
+    document.getElementById('summaryLeaderboardScore').textContent = `${formatSwissNumber(Math.round(state.totalScore))} pts`;
     document.getElementById('summaryLeaderboardRankDetail').textContent =
         `${ownEntry ? `${ownEntry.riderName} · ` : ''}${state.workout.name} · ${modeLabel}`;
 
