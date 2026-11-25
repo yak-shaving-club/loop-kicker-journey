@@ -80,10 +80,10 @@
         if (dirEl) {
             if (effectiveDeg < -1.2) {
                 dirEl.textContent = '◀ LEFT';
-                dirEl.className = 'text-[11px] font-bold text-cyan-300 uppercase tracking-wider';
+                dirEl.className = 'text-[11px] font-bold text-blue-300 uppercase tracking-wider';
             } else if (effectiveDeg > 1.2) {
                 dirEl.textContent = 'RIGHT ▶';
-                dirEl.className = 'text-[11px] font-bold text-emerald-300 uppercase tracking-wider';
+                dirEl.className = 'text-[11px] font-bold text-blue-300 uppercase tracking-wider';
             } else {
                 dirEl.textContent = 'CENTERED';
                 dirEl.className = 'text-[11px] font-bold text-gray-400 uppercase tracking-wider';
@@ -159,7 +159,7 @@
             logDiag('Motion sensors unavailable: requires HTTPS secure context');
             if (enableBtn) {
                 enableBtn.textContent = 'Sensors Require HTTPS — Use Slider';
-                enableBtn.className = 'w-full py-2 px-3 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold text-xs shrink-0';
+                enableBtn.className = 'w-full py-2 px-3 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold text-xs shrink-0';
             }
             return;
         }
@@ -173,7 +173,7 @@
                 if (res !== 'granted') {
                     if (enableBtn) {
                         enableBtn.textContent = 'Sensor Permission Denied — Use Slider';
-                        enableBtn.className = 'w-full py-2 px-3 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold text-xs shrink-0';
+                        enableBtn.className = 'w-full py-2 px-3 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold text-xs shrink-0';
                     }
                     return;
                 }
@@ -182,7 +182,7 @@
             window.addEventListener('deviceorientation', handleOrientation, true);
             if (enableBtn) {
                 enableBtn.textContent = 'Listening for Motion... Tilt Phone';
-                enableBtn.className = 'w-full py-2 px-3 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-xs shrink-0';
+                enableBtn.className = 'w-full py-2 px-3 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold text-xs shrink-0';
                 setTimeout(() => {
                     if (sensorActive) {
                         enableBtn.classList.add('hidden');
@@ -197,7 +197,7 @@
             logDiag(`Motion sensor error: ${err && (err.message || err)}`);
             if (enableBtn) {
                 enableBtn.textContent = 'Sensors Require HTTPS — Use Slider';
-                enableBtn.className = 'w-full py-2 px-3 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold text-xs shrink-0';
+                enableBtn.className = 'w-full py-2 px-3 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold text-xs shrink-0';
             }
         }
     }
@@ -205,7 +205,7 @@
     if (enableBtn) {
         if (!window.isSecureContext || typeof DeviceOrientationEvent === 'undefined') {
             enableBtn.textContent = 'Sensors Require HTTPS — Use Slider';
-            enableBtn.className = 'w-full py-1.5 px-3 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold text-[11px] shrink-0';
+            enableBtn.className = 'w-full py-1.5 px-3 rounded-xl bg-blue-500/15 text-blue-300 border border-blue-500/30 font-semibold text-[11px] shrink-0';
         } else {
             window.addEventListener('deviceorientationabsolute', handleOrientation, true);
             window.addEventListener('deviceorientation', handleOrientation, true);
@@ -256,10 +256,10 @@
     if (!hostPeerId) {
         if (statusEl) {
             statusEl.textContent = 'Demo Mode (Scan Desktop QR to Pair)';
-            statusEl.className = 'text-xs font-bold text-cyan-300 truncate';
+            statusEl.className = 'text-xs font-bold text-blue-300 truncate';
         }
         if (dotEl) {
-            dotEl.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 shrink-0';
+            dotEl.className = 'w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0';
         }
         logDiag('No ?phone-steer=<id> in URL. Running in local demo mode.');
         return;
@@ -301,10 +301,10 @@
             logDiag(reason || 'Disconnected by laptop — stopped sending events.');
             if (statusEl) {
                 statusEl.textContent = 'Disconnected (Stopped)';
-                statusEl.className = 'text-xs font-bold text-rose-400 truncate';
+                statusEl.className = 'text-xs font-bold text-blue-400 truncate';
             }
             if (dotEl) {
-                dotEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
+                dotEl.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0';
             }
         }
 
@@ -327,9 +327,9 @@
                     if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
                         if (statusEl) {
                             statusEl.textContent = `ICE ${pc.iceConnectionState} (P2P UDP blocked)`;
-                            statusEl.className = 'text-xs font-bold text-rose-400 truncate';
+                            statusEl.className = 'text-xs font-bold text-blue-400 truncate';
                         }
-                        if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
+                        if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0';
                     }
                 });
                 pc.addEventListener('connectionstatechange', () => {
@@ -387,10 +387,10 @@
                 logDiag('DataChannel OPEN! Connected to laptop.');
                 if (statusEl) {
                     statusEl.textContent = 'Connected to Laptop';
-                    statusEl.className = 'text-xs font-bold text-emerald-400 truncate';
+                    statusEl.className = 'text-xs font-bold text-blue-400 truncate';
                 }
                 if (dotEl) {
-                    dotEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0';
+                    dotEl.className = 'w-2.5 h-2.5 rounded-full bg-blue-400 animate-ping shrink-0';
                 }
                 updateControllerUiAndSend(currentAngleDeg, true);
             });
@@ -414,9 +414,9 @@
                 logDiag('DataChannel closed. Retrying in 4s...');
                 if (statusEl) {
                     statusEl.textContent = 'Reconnecting to laptop...';
-                    statusEl.className = 'text-xs font-bold text-amber-300 truncate';
+                    statusEl.className = 'text-xs font-bold text-blue-300 truncate';
                 }
-                if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0';
+                if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse shrink-0';
                 retryTimer = setTimeout(connectToHost, 4000);
             });
             conn.on('error', (err) => {
@@ -436,16 +436,16 @@
             if (err && err.type === 'peer-unavailable') {
                 if (statusEl) {
                     statusEl.textContent = 'Laptop peer not found (check QR)...';
-                    statusEl.className = 'text-xs font-bold text-amber-300 truncate';
+                    statusEl.className = 'text-xs font-bold text-blue-300 truncate';
                 }
-                if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0';
+                if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse shrink-0';
                 retryTimer = setTimeout(connectToHost, 4000);
             } else {
                 if (statusEl) {
                     statusEl.textContent = `Error: ${err.type || 'failed'}`;
-                    statusEl.className = 'text-xs font-bold text-rose-400 truncate';
+                    statusEl.className = 'text-xs font-bold text-blue-400 truncate';
                 }
-                if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
+                if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0';
             }
         });
     }

@@ -174,10 +174,10 @@ function updateGhostHud() {
     const baseClass = 'px-2 py-0.5 rounded-lg border text-xs sm:text-sm font-black tabular-nums whitespace-nowrap';
     if (scoreDelta > 0) {
         scoreEl.textContent = `▲ ${formatSwissNumber(scoreDelta)} pts ahead`;
-        scoreEl.className = `${baseClass} bg-emerald-500/15 border-emerald-400/50 text-emerald-300`;
+        scoreEl.className = `${baseClass} bg-blue-500/15 border-blue-400/50 text-blue-300`;
     } else if (scoreDelta < 0) {
         scoreEl.textContent = `▼ ${formatSwissNumber(-scoreDelta)} pts behind`;
-        scoreEl.className = `${baseClass} bg-rose-500/15 border-rose-400/50 text-rose-300`;
+        scoreEl.className = `${baseClass} bg-blue-500/15 border-blue-400/50 text-blue-300`;
     } else {
         scoreEl.textContent = 'Tied';
         scoreEl.className = `${baseClass} bg-gray-500/15 border-gray-400/40 text-gray-200`;
@@ -266,7 +266,7 @@ function closeGhostBattlePanel() {
 function setGhostBattleStatus(text, isError = false) {
     const statusEl = document.getElementById('ghostBattleStatus');
     statusEl.textContent = text;
-    statusEl.className = `text-xs mt-3 ${isError ? 'text-rose-300' : 'text-gray-400'}`;
+    statusEl.className = `text-xs mt-3 ${isError ? 'text-blue-300' : 'text-gray-400'}`;
 }
 
 const GHOST_LEADERBOARD_SIZE = 3;
@@ -316,7 +316,7 @@ function renderGhostBattleList(rides) {
         nameEl.className = 'text-sm font-black text-white truncate';
         nameEl.textContent = group.workoutName;
         const modeEl = document.createElement('span');
-        modeEl.className = 'shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300';
+        modeEl.className = 'shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/40 text-blue-300';
         modeEl.textContent = GHOST_MODE_LABELS[group.resistanceMode] || group.resistanceMode || 'Unknown Mode';
         headerEl.append(nameEl, modeEl);
 
@@ -326,7 +326,7 @@ function renderGhostBattleList(rides) {
             const itemEl = document.createElement('li');
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'w-full text-left rounded-xl px-3 py-2 bg-gray-950/80 hover:bg-cyan-500/10 border border-gray-800 hover:border-cyan-400/50 transition cursor-pointer flex items-center gap-3';
+            btn.className = 'w-full text-left rounded-xl px-3 py-2 bg-gray-950/80 hover:bg-blue-500/10 border border-gray-800 hover:border-blue-400/50 transition cursor-pointer flex items-center gap-3';
 
             const medalEl = document.createElement('span');
             medalEl.className = 'shrink-0 text-lg leading-none';
@@ -344,7 +344,7 @@ function renderGhostBattleList(rides) {
             textEl.append(riderEl, detailEl);
 
             const scoreEl = document.createElement('div');
-            scoreEl.className = 'shrink-0 text-right font-mono font-black text-cyan-200 text-sm';
+            scoreEl.className = 'shrink-0 text-right font-mono font-black text-blue-200 text-sm';
             scoreEl.textContent = ride.finalScore !== null ? `${formatSwissNumber(ride.finalScore)} pts` : '';
 
             btn.append(medalEl, textEl, scoreEl);
@@ -414,7 +414,7 @@ const RIDER_NAME_STORAGE_KEY = 'loop_kicker_journey_rider_name';
 
 function setRideSaveStatus(text, tone = 'info') {
     const el = document.getElementById('summaryRideSaveStatus');
-    const toneClass = { info: 'text-gray-400', success: 'text-amber-300', error: 'text-rose-300' }[tone];
+    const toneClass = { info: 'text-gray-400', success: 'text-blue-300', error: 'text-blue-300' }[tone];
     el.textContent = text;
     el.className = `text-xs font-bold ${toneClass}${text ? '' : ' hidden'}`;
 }
@@ -471,7 +471,7 @@ function renderLeaderboardRank({ rank, total, top, saved, ownEntry = null }) {
     top.slice(0, GHOST_LEADERBOARD_SIZE).forEach((entry, idx) => {
         const isOwn = ownEntry && entry.ghostFile === ownEntry.ghostFile;
         const itemEl = document.createElement('li');
-        itemEl.className = `flex items-center gap-1.5 ${isOwn ? 'text-amber-300 font-black' : 'text-gray-200'}`;
+        itemEl.className = `flex items-center gap-1.5 ${isOwn ? 'text-blue-300 font-black' : 'text-gray-200'}`;
         const medalEl = document.createElement('span');
         medalEl.textContent = GHOST_RANK_MEDALS[idx];
         const nameEl = document.createElement('span');
@@ -529,7 +529,7 @@ function toggleSimMode(forceState) {
     if (state.simMode) {
         bar.classList.remove('hidden');
         text.textContent = 'Sim Mode: ON';
-        btn.className = 'px-2.5 py-2 rounded-xl font-semibold text-xs flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 transition cursor-pointer';
+        btn.className = 'px-2.5 py-2 rounded-xl font-semibold text-xs flex items-center gap-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 transition cursor-pointer';
         if (state.simAutoJitter && state.workout) {
             const targetW = getTargetWattsAtSecond(state.workout, state.elapsedSec, state.ftp);
             state.actualWatts = targetW;

@@ -211,9 +211,9 @@ function updateFtpTestHudUI() {
         pauseCountdownBlock.classList.toggle('flex', showPauseFtpCountdown);
     }
     if (pauseCard) {
-        pauseCard.classList.toggle('border-amber-400/60', !showPauseFtpCountdown);
-        pauseCard.classList.toggle('border-rose-500/80', showPauseFtpCountdown);
-        pauseCard.classList.toggle('shadow-rose-500/25', showPauseFtpCountdown);
+        pauseCard.classList.toggle('border-blue-400/60', !showPauseFtpCountdown);
+        pauseCard.classList.toggle('border-blue-500/80', showPauseFtpCountdown);
+        pauseCard.classList.toggle('shadow-blue-500/25', showPauseFtpCountdown);
     }
     if (showPauseFtpCountdown) {
         const valEl = document.getElementById('pauseFtpCountdownValue');
@@ -243,17 +243,17 @@ function updateFtpTestHudUI() {
 }
 
 const DURATION_CATEGORIES = {
-    short: { label: '≤15m Short', badgeClass: 'bg-sky-500/15 text-sky-300 border-sky-500/35' },
-    medium: { label: '16–30m Medium', badgeClass: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/35' },
-    long: { label: '30m+ Long', badgeClass: 'bg-violet-500/15 text-violet-300 border-violet-500/35' }
+    short: { label: '≤15m Short', badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/35' },
+    medium: { label: '16–30m Medium', badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/35' },
+    long: { label: '30m+ Long', badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/35' }
 };
 
 const INTENSITY_CATEGORIES = {
     low: { label: 'Endurance (Z1–Z2)', shortLabel: 'Endurance', badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/35' },
-    moderate: { label: 'Sweet Spot / Tempo', shortLabel: 'Sweet Spot', badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35' },
-    threshold: { label: 'Threshold (Z4)', shortLabel: 'Threshold', badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/35' },
-    high: { label: 'VO2max / HIIT', shortLabel: 'VO2max / HIIT', badgeClass: 'bg-rose-500/15 text-rose-300 border-rose-500/35' },
-    ftp_test: { label: 'FTP Ramp Test', shortLabel: 'FTP Test', badgeClass: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-400/50' }
+    moderate: { label: 'Sweet Spot / Tempo', shortLabel: 'Sweet Spot', badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/35' },
+    threshold: { label: 'Threshold (Z4)', shortLabel: 'Threshold', badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/35' },
+    high: { label: 'VO2max / HIIT', shortLabel: 'VO2max / HIIT', badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/35' },
+    ftp_test: { label: 'FTP Ramp Test', shortLabel: 'FTP Test', badgeClass: 'bg-blue-500/20 text-blue-300 border-blue-400/50' }
 };
 
 function categorizeWorkout(workout, ftpInputVal = state.ftp) {
@@ -910,7 +910,7 @@ function finishWorkoutAndShowSummary() {
     if (isFtpTest && calculatedFtpResult) {
         if (summaryHeaderBadgeEl) {
             summaryHeaderBadgeEl.textContent = 'FTP RAMP TEST COMPLETED';
-            summaryHeaderBadgeEl.className = 'text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-400/40';
+            summaryHeaderBadgeEl.className = 'text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/25 text-blue-200 border border-blue-400/40';
         }
         if (summarySubtitleEl) {
             summarySubtitleEl.textContent = wasAutoStoppedFtpTest
@@ -931,14 +931,14 @@ function finishWorkoutAndShowSummary() {
                     ? `Unchanged (${calculatedFtpResult.previousFtp} W)`
                     : `Prev ${calculatedFtpResult.previousFtp} W (${diffSign}${diff} W)`;
                 deltaEl.className = diff > 0
-                    ? 'px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-[11px] font-mono font-bold text-emerald-300'
+                    ? 'px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/50 text-[11px] font-mono font-bold text-blue-300'
                     : 'px-2 py-0.5 rounded-full bg-gray-900/90 border border-gray-700 text-[11px] font-mono font-bold text-gray-300';
             }
         }
     } else {
         if (summaryHeaderBadgeEl) {
             summaryHeaderBadgeEl.textContent = 'DRAGON FLIGHT COMPLETED';
-            summaryHeaderBadgeEl.className = 'text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+            summaryHeaderBadgeEl.className = 'text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30';
         }
         if (summarySubtitleEl) {
             summarySubtitleEl.textContent = 'Awesome flight! Here is your complete 3D gate accuracy, obstacle defense & power breakdown.';
@@ -996,15 +996,15 @@ function syncWorkoutFilterButtonsUI() {
     document.querySelectorAll('[data-duration-filter]').forEach((btn) => {
         const active = btn.getAttribute('data-duration-filter') === state.durationFilter;
         btn.className = active
-            ? 'px-2 py-0.5 rounded-lg text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-400/50 cursor-pointer transition'
+            ? 'px-2 py-0.5 rounded-lg text-[11px] font-black bg-blue-500/20 text-blue-300 border border-blue-400/50 cursor-pointer transition'
             : 'px-2 py-0.5 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-gray-200 hover:bg-gray-800 border border-transparent cursor-pointer transition';
     });
     document.querySelectorAll('[data-intensity-filter]').forEach((btn) => {
         const filterVal = btn.getAttribute('data-intensity-filter');
         const active = filterVal === state.intensityFilter;
         const activeStyle = filterVal === 'ftp_test'
-            ? 'px-2 py-0.5 rounded-lg text-[11px] font-black bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-400/60 cursor-pointer transition'
-            : 'px-2 py-0.5 rounded-lg text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-400/50 cursor-pointer transition';
+            ? 'px-2 py-0.5 rounded-lg text-[11px] font-black bg-blue-500/25 text-blue-200 border border-blue-400/60 cursor-pointer transition'
+            : 'px-2 py-0.5 rounded-lg text-[11px] font-black bg-blue-500/20 text-blue-300 border border-blue-400/50 cursor-pointer transition';
         btn.className = active
             ? activeStyle
             : 'px-2 py-0.5 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-gray-200 hover:bg-gray-800 border border-transparent cursor-pointer transition';
@@ -1038,7 +1038,7 @@ function renderPresetWorkoutCards() {
         msgSpan.textContent = 'No built-in workouts match the selected duration and intensity filters.';
         const resetBtn = document.createElement('button');
         resetBtn.type = 'button';
-        resetBtn.className = 'px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-amber-300 font-bold border border-gray-700 cursor-pointer transition';
+        resetBtn.className = 'px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-blue-300 font-bold border border-gray-700 cursor-pointer transition';
         resetBtn.textContent = 'Show All Workouts';
         resetBtn.addEventListener('click', () => {
             state.durationFilter = 'all';
@@ -1056,8 +1056,8 @@ function renderPresetWorkoutCards() {
         const cat = categorizeWorkout(workout, state.ftp);
         const isSelected = state.selectedPresetKey === key;
         const selectedBorder = workout.isFtpTest
-            ? 'bg-fuchsia-500/15 border-fuchsia-400/70 shadow-md shadow-fuchsia-500/15'
-            : 'bg-amber-500/15 border-amber-400/60 shadow-md shadow-amber-500/10';
+            ? 'bg-blue-500/15 border-blue-400/70 shadow-md shadow-blue-500/15'
+            : 'bg-blue-500/15 border-blue-400/60 shadow-md shadow-blue-500/10';
         const card = document.createElement('button');
         card.type = 'button';
         card.setAttribute('data-preset-card', key);
@@ -1069,11 +1069,11 @@ function renderPresetWorkoutCards() {
         topRow.className = 'flex items-start justify-between gap-2';
         const titleSpan = document.createElement('span');
         titleSpan.className = isSelected
-            ? (workout.isFtpTest ? 'text-xs font-black text-fuchsia-200 leading-snug' : 'text-xs font-black text-amber-300 leading-snug')
+            ? 'text-xs font-black text-white leading-snug'
             : 'text-xs font-bold text-gray-100 leading-snug';
         titleSpan.textContent = workout.name;
         const durSpan = document.createElement('span');
-        durSpan.className = 'px-1.5 py-0.5 rounded bg-gray-950 border border-gray-800 text-[10px] font-mono font-bold text-emerald-300 shrink-0 whitespace-nowrap';
+        durSpan.className = 'px-1.5 py-0.5 rounded bg-gray-950 border border-gray-800 text-[10px] font-mono font-bold text-blue-300 shrink-0 whitespace-nowrap';
         durSpan.textContent = formatDuration(workout.totalDuration);
         topRow.appendChild(titleSpan);
         topRow.appendChild(durSpan);

@@ -4268,7 +4268,7 @@ class DragonSky3DEngine {
             if (fireStatus.canFire) {
                 const secText = Math.max(0.1, fireStatus.secondsUntilReach).toFixed(1);
                 fireBtn.disabled = false;
-                fireBtn.className = 'px-3 py-1 rounded-xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-400 hover:from-rose-500 hover:to-yellow-300 text-gray-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-orange-500/30 flex items-center gap-1.5 cursor-pointer active:scale-95 transition';
+                fireBtn.className = 'px-3 py-1 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition';
                 fireBtnText.innerHTML = `&#128293; Fire Breath [SPACE] (-${fireStatus.pointCost} PTS &bull; ${secText}s)`;
             } else {
                 fireBtn.disabled = true;

@@ -44,7 +44,7 @@ function updateHeaderAndSetupVisibility() {
     document.querySelectorAll('[data-step-nav]').forEach((btn) => {
         const step = btn.getAttribute('data-step-nav');
         if (step === current) {
-            btn.className = 'px-2.5 sm:px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer border bg-amber-500/20 text-amber-300 border-amber-400/50 shadow';
+            btn.className = 'px-2.5 sm:px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer border bg-blue-500/20 text-blue-300 border-blue-400/50 shadow';
         } else {
             btn.className = 'px-2.5 sm:px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer border bg-gray-900/80 hover:bg-gray-800 text-gray-300 border-gray-800';
         }
@@ -124,12 +124,12 @@ const bleHrmSensor = new BleHeartRateMonitor(
         if (text) text.textContent = label;
         if (!btn || !dot) return;
         if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-emerald-200 animate-ping';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
         } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
         } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-rose-700/80 hover:bg-rose-600 text-white border border-rose-400/30';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
             dot.className = 'w-2 h-2 rounded-full bg-gray-300';
         }
     }
@@ -143,15 +143,15 @@ const bleEliteAriaFan = new BleEliteAriaFan(
         if (text) text.textContent = label;
         if (!btn || !dot) return;
         if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-emerald-200 animate-ping';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
         } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
         } else if (status === 'error') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-rose-700/80 hover:bg-rose-600 text-white border border-rose-400/30';
-            dot.className = 'w-2 h-2 rounded-full bg-rose-300';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-300';
         } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-orange-700/80 hover:bg-orange-600 text-white border border-orange-400/30';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
             dot.className = 'w-2 h-2 rounded-full bg-gray-300';
         }
     }
@@ -172,12 +172,12 @@ const bleCadenceSensor = new BleCadenceSensor(
         if (text) text.textContent = label;
         if (!btn || !dot) return;
         if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-emerald-200 animate-ping';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
         } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
         } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-emerald-700/80 hover:bg-emerald-600 text-white border border-emerald-400/30';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
             dot.className = 'w-2 h-2 rounded-full bg-gray-300';
         }
     }
@@ -201,12 +201,12 @@ const bleSteeringSensor = new BleEliteSteeringSensor(
         if (text) text.textContent = label;
         if (!btn || !dot) return;
         if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-emerald-200 animate-ping';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
         } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
         } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-purple-700/80 hover:bg-purple-600 text-white border border-purple-400/30';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
             dot.className = 'w-2 h-2 rounded-full bg-gray-300';
         }
     }
@@ -240,22 +240,22 @@ const phoneSteeringSensor = new PhoneWebRtcSteeringSensor(
         if (text) text.textContent = label;
         if (status === 'connected') {
             if (!state.steeringEnabled) setSteeringEnabled(true);
-            if (btn) btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40';
-            if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-200 animate-ping';
+            if (btn) btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
+            if (dot) dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
             if (modalStatus) {
                 modalStatus.textContent = 'Phone connected! Turn handlebar to steer.';
-                modalStatus.className = 'font-bold text-emerald-300';
+                modalStatus.className = 'font-bold text-blue-300';
             }
             if (disconnectBtn) disconnectBtn.classList.remove('hidden');
         } else if (status === 'connecting') {
-            if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse';
+            if (dot) dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
             if (modalStatus) {
                 modalStatus.textContent = 'Waiting for phone to scan QR code...';
-                modalStatus.className = 'font-bold text-indigo-300';
+                modalStatus.className = 'font-bold text-blue-300';
             }
             if (disconnectBtn) disconnectBtn.classList.add('hidden');
         } else {
-            if (btn) btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-indigo-700/80 hover:bg-indigo-600 text-white border border-indigo-400/30';
+            if (btn) btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
             if (dot) dot.className = 'w-2 h-2 rounded-full bg-gray-300';
             if (modalStatus) {
                 modalStatus.textContent = 'Disconnected. Scan QR code to connect.';
@@ -291,10 +291,10 @@ const bleTrainer = new WahooKickrBluetooth(
         const dot = document.getElementById('bleStatusDot');
         text.textContent = label;
         if (status === 'connected') {
-            btn.className = 'px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-emerald-200 animate-ping';
+            btn.className = 'px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
         } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
         } else {
             btn.className = 'px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30';
             dot.className = 'w-2 h-2 rounded-full bg-gray-300';
@@ -328,12 +328,12 @@ const bleRower = new BleConcept2Rower(
         if (text) text.textContent = label;
         if (!btn || !dot) return;
         if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-emerald-200 animate-ping';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
         } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse';
+            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
         } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-sky-700/80 hover:bg-sky-600 text-white border border-sky-400/30';
+            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
             dot.className = 'w-2 h-2 rounded-full bg-gray-300';
         }
     }
@@ -409,7 +409,7 @@ function spawnFloatingScorePopup(points, isBullseye, ratioPct, customSubtitle) {
     const leftPct = 44 + (Math.random() * 20 - 10);
     const topPct = 38 + (Math.random() * 14 - 7);
     el.className = `floating-score absolute font-black font-mono text-center select-none ${
-                isBullseye ? 'text-yellow-300 text-2xl drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]' : 'text-emerald-300 text-xl drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                isBullseye ? 'text-blue-300 text-2xl drop-shadow-[0_0_12px_rgba(96,165,250,0.9)]' : 'text-blue-300 text-xl drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]'
             }`;
     el.style.left = `${leftPct}%`;
     el.style.top = `${topPct}%`;
@@ -428,8 +428,8 @@ function spawnGhostScorePopup(points, screenPos) {
     anchor.style.top = `${screenPos ? screenPos.yPct : 36}%`;
     anchor.style.transform = 'translate(-50%, -100%)';
     const el = document.createElement('div');
-    el.className = 'floating-score font-black font-mono text-center select-none text-cyan-200/80 text-lg italic drop-shadow-[0_0_10px_rgba(34,211,238,0.85)]';
-    el.innerHTML = `+${formatSwissNumber(points)} PTS<div class="text-[10px] font-bold uppercase tracking-wider text-cyan-300/80">GHOST</div>`;
+    el.className = 'floating-score font-black font-mono text-center select-none text-blue-200/80 text-lg italic drop-shadow-[0_0_10px_rgba(34,211,238,0.85)]';
+    el.innerHTML = `+${formatSwissNumber(points)} PTS<div class="text-[10px] font-bold uppercase tracking-wider text-blue-300/80">GHOST</div>`;
     anchor.appendChild(el);
     container.appendChild(anchor);
     setTimeout(() => anchor.remove(), 1150);
@@ -438,18 +438,18 @@ function spawnGhostScorePopup(points, screenPos) {
 const RING_STREAK_MILESTONE = 15;
 const RING_STREAK_BONUS_PER_TIER = 250;
 const RING_STREAK_TITLES = ['NICE STREAK!', 'ON FIRE!', 'UNSTOPPABLE!', 'DRAGON MASTER!', 'LEGENDARY!'];
-const RING_STREAK_COLORS = ['text-emerald-300', 'text-yellow-300', 'text-orange-400', 'text-fuchsia-400', 'text-cyan-300'];
+const RING_STREAK_COLORS = ['text-blue-300', 'text-blue-300', 'text-blue-400', 'text-blue-400', 'text-blue-300'];
 
 function spawnRingStreakSplash(ringCount, tier, bonusPts) {
     const container = document.getElementById('floatingScoreContainer');
     const el = document.createElement('div');
     const idx = Math.min(tier - 1, RING_STREAK_TITLES.length - 1);
-    el.className = `streak-splash absolute font-black font-mono text-center select-none ${RING_STREAK_COLORS[idx]} drop-shadow-[0_0_24px_rgba(250,204,21,0.95)]`;
+    el.className = `streak-splash absolute font-black font-mono text-center select-none ${RING_STREAK_COLORS[idx]} drop-shadow-[0_0_24px_rgba(59,130,246,0.95)]`;
     el.style.left = '50%';
     el.style.top = '30%';
     el.innerHTML = `<div class="text-4xl sm:text-6xl tracking-wider">${RING_STREAK_TITLES[idx]}</div>`
         + `<div class="text-lg sm:text-2xl font-extrabold uppercase tracking-widest text-white mt-1">${ringCount} RINGS IN A ROW</div>`
-        + `<div class="text-2xl sm:text-4xl mt-1 text-yellow-300">+${formatSwissNumber(bonusPts)} BONUS</div>`;
+        + `<div class="text-2xl sm:text-4xl mt-1 text-blue-300">+${formatSwissNumber(bonusPts)} BONUS</div>`;
     container.appendChild(el);
     setTimeout(() => el.remove(), 2200);
 }
@@ -457,10 +457,10 @@ function spawnRingStreakSplash(ringCount, tier, bonusPts) {
 function spawnFireballCostPopup(costPts) {
     const container = document.getElementById('floatingScoreContainer');
     const el = document.createElement('div');
-    el.className = 'floating-score absolute font-black font-mono text-center select-none text-amber-300 text-lg sm:text-xl drop-shadow-[0_0_12px_rgba(249,115,22,0.9)]';
+    el.className = 'floating-score absolute font-black font-mono text-center select-none text-blue-300 text-lg sm:text-xl drop-shadow-[0_0_12px_rgba(37,99,235,0.9)]';
     el.style.left = '46%';
     el.style.top = '32%';
-    el.innerHTML = `-${costPts} PTS<div class="text-[10px] font-extrabold uppercase tracking-wider text-orange-300">FIREBALL SHOT COST</div>`;
+    el.innerHTML = `-${costPts} PTS<div class="text-[10px] font-extrabold uppercase tracking-wider text-blue-300">FIREBALL SHOT COST</div>`;
     container.appendChild(el);
     setTimeout(() => el.remove(), 950);
 }
@@ -468,10 +468,10 @@ function spawnFireballCostPopup(costPts) {
 function spawnObstaclePenaltyPopup(penaltyPts) {
     const container = document.getElementById('floatingScoreContainer');
     const el = document.createElement('div');
-    el.className = 'floating-score absolute font-black font-mono text-center select-none text-rose-400 text-2xl sm:text-3xl drop-shadow-[0_0_16px_rgba(244,63,94,0.95)]';
+    el.className = 'floating-score absolute font-black font-mono text-center select-none text-blue-400 text-2xl sm:text-3xl drop-shadow-[0_0_16px_rgba(96,165,250,0.95)]';
     el.style.left = '42%';
     el.style.top = '40%';
-    el.innerHTML = `-${penaltyPts} PTS<div class="text-xs font-extrabold uppercase tracking-wider text-yellow-300">OBSTACLE IMPACT! PRESS SPACEBAR!</div>`;
+    el.innerHTML = `-${penaltyPts} PTS<div class="text-xs font-extrabold uppercase tracking-wider text-blue-300">OBSTACLE IMPACT! PRESS SPACEBAR!</div>`;
     container.appendChild(el);
     setTimeout(() => el.remove(), 1250);
 }
@@ -479,10 +479,10 @@ function spawnObstaclePenaltyPopup(penaltyPts) {
 function spawnArrowHitPenaltyPopup(penaltyPts) {
     const container = document.getElementById('floatingScoreContainer');
     const el = document.createElement('div');
-    el.className = 'floating-score absolute font-black font-mono text-center select-none text-rose-400 text-2xl sm:text-3xl drop-shadow-[0_0_16px_rgba(244,63,94,0.95)]';
+    el.className = 'floating-score absolute font-black font-mono text-center select-none text-blue-400 text-2xl sm:text-3xl drop-shadow-[0_0_16px_rgba(96,165,250,0.95)]';
     el.style.left = '43%';
     el.style.top = '36%';
-    el.innerHTML = `-${penaltyPts} PTS<div class="text-xs font-extrabold uppercase tracking-wider text-amber-300">HUNTER ARROW HIT! STEER LEFT / RIGHT!</div>`;
+    el.innerHTML = `-${penaltyPts} PTS<div class="text-xs font-extrabold uppercase tracking-wider text-blue-300">HUNTER ARROW HIT! STEER LEFT / RIGHT!</div>`;
     container.appendChild(el);
     setTimeout(() => el.remove(), 1200);
 }
@@ -490,10 +490,10 @@ function spawnArrowHitPenaltyPopup(penaltyPts) {
 function spawnBirdStrikePopup(penaltyPts) {
     const container = document.getElementById('floatingScoreContainer');
     const el = document.createElement('div');
-    el.className = 'floating-score absolute font-black font-mono text-center select-none text-rose-400 text-2xl sm:text-3xl drop-shadow-[0_0_16px_rgba(244,63,94,0.95)]';
+    el.className = 'floating-score absolute font-black font-mono text-center select-none text-blue-400 text-2xl sm:text-3xl drop-shadow-[0_0_16px_rgba(96,165,250,0.95)]';
     el.style.left = '44%';
     el.style.top = '38%';
-    el.innerHTML = `-${penaltyPts} PTS<div class="text-xs font-extrabold uppercase tracking-wider text-yellow-300">BIRD STRIKE! STEER AROUND THE BIRDS!</div>`;
+    el.innerHTML = `-${penaltyPts} PTS<div class="text-xs font-extrabold uppercase tracking-wider text-blue-300">BIRD STRIKE! STEER AROUND THE BIRDS!</div>`;
     container.appendChild(el);
     setTimeout(() => el.remove(), 1250);
 }

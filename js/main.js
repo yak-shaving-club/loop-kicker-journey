@@ -49,7 +49,7 @@ function syncAvatarCardsUI() {
     document.querySelectorAll('[data-avatar-card]').forEach((card) => {
         const active = card.getAttribute('data-avatar-card') === state.avatarType;
         card.className = active
-            ? 'text-left rounded-2xl p-3 border-2 transition cursor-pointer flex flex-col justify-between gap-1 bg-amber-500/20 border-amber-400 shadow-lg shadow-amber-500/20'
+            ? 'text-left rounded-2xl p-3 border-2 transition cursor-pointer flex flex-col justify-between gap-1 bg-blue-500/20 border-blue-400 shadow-lg shadow-blue-500/20'
             : 'text-left rounded-2xl p-3 border transition cursor-pointer flex flex-col justify-between gap-1 bg-gray-900/80 hover:bg-gray-800 border-gray-800 hover:border-gray-700';
     });
 }
@@ -400,7 +400,7 @@ function renderPhoneSteerQrCode(peerId) {
             svgEl.setAttribute('height', '196');
         }
     } else {
-        qrContainer.innerHTML = `<a href="${targetUrlStr}" target="_blank" class="text-xs text-indigo-600 underline break-all p-2">${targetUrlStr}</a>`;
+        qrContainer.innerHTML = `<a href="${targetUrlStr}" target="_blank" class="text-xs text-blue-600 underline break-all p-2">${targetUrlStr}</a>`;
     }
 }
 
@@ -428,7 +428,7 @@ document.getElementById('connectPhoneSteerBtn').addEventListener('click', async 
     } catch (err) {
         const qrContainer = document.getElementById('phoneSteerQrContainer');
         if (qrContainer) {
-            qrContainer.innerHTML = `<span class="text-xs text-rose-500 font-bold p-2">${err.message || 'Could not start WebRTC peer.'}</span>`;
+            qrContainer.innerHTML = `<span class="text-xs text-blue-500 font-bold p-2">${err.message || 'Could not start WebRTC peer.'}</span>`;
         }
     }
 });
@@ -600,27 +600,6 @@ document.getElementById('zwoFileInput').addEventListener('change', (e) => {
         } catch (err) {
             alert('Failed to parse Zwift workout file: ' + err.message);
         }
-    };
-    reader.readAsText(file);
-});
-
-document.getElementById('ghostFileInput').addEventListener('change', (e) => {
-    const input = e.target;
-    const file = input.files && input.files[0];
-    if (!file) return;
-    if (state.hasStartedSession) {
-        alert('Finish or close the current ride before loading a ghost.');
-        input.value = '';
-        return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        try {
-            loadGhostRideFromText(ev.target.result);
-        } catch (err) {
-            alert('Failed to load ghost ride: ' + err.message);
-        }
-        input.value = '';
     };
     reader.readAsText(file);
 });
@@ -797,7 +776,7 @@ function drawBottomTimelineOverlayOnScreenshot(ctx, width, height, pxRatio) {
                 drawRoundedRectPath(ctx, lx, headerCenterY - dotSize / 2, dotSize, dotSize, Math.round(2 * s));
                 ctx.fill();
                 lx += dotSize + Math.round(4 * s);
-                ctx.fillStyle = '#d1d5db';
+                ctx.fillStyle = z.color;
                 ctx.fillText(z.label, lx, headerCenterY);
                 lx += Math.ceil(ctx.measureText(z.label).width) + itemGap;
             });
@@ -882,13 +861,13 @@ function prepareWorkoutScreenshot() {
 
     ctx.save();
     ctx.fillStyle = 'rgba(3, 7, 18, 0.86)';
-    ctx.strokeStyle = 'rgba(249, 115, 22, 0.7)';
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.7)';
     ctx.lineWidth = Math.max(1.5, 2 * scale);
     drawRoundedRectPath(ctx, boxX, boxY, boxW, boxH, Math.round(14 * scale));
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#fde047';
+    ctx.fillStyle = '#93c5fd';
     ctx.font = `900 ${Math.round(13 * scale)}px sans-serif`;
     const textPadX = Math.round(14 * scale);
     const maxTitleWidth = boxW - textPadX * 2;
@@ -903,7 +882,7 @@ function prepareWorkoutScreenshot() {
     }
     ctx.fillText(croppedWorkoutName, boxX + textPadX, boxY + Math.round(24 * scale));
 
-    ctx.fillStyle = '#fb923c';
+    ctx.fillStyle = '#60a5fa';
     ctx.font = `900 ${Math.round(22 * scale)}px monospace`;
     ctx.fillText(`POINTS: ${scoreStr}`, boxX + Math.round(14 * scale), boxY + Math.round(52 * scale));
     ctx.restore();

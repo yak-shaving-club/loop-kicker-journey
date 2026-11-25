@@ -19,8 +19,8 @@ class VisualEffectsEngine {
     spawnAccuracyBurst(x, y, accuracyRatio, isBullseye) {
         const count = isBullseye ? 32 : Math.round(12 + accuracyRatio * 14);
         const colors = isBullseye
-            ? ['#fde047', '#facc15', '#4ade80', '#38bdf8', '#f97316']
-            : ['#4ade80', '#2dd4bf', '#34d399', '#a7f3d0'];
+            ? ['#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#1d4ed8']
+            : ['#60a5fa', '#3b82f6', '#93c5fd', '#bfdbfe'];
 
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
@@ -42,7 +42,7 @@ class VisualEffectsEngine {
                 radius: 20,
                 maxRadius: 210,
                 alpha: 0.75,
-                color: '#facc15'
+                color: '#60a5fa'
             });
         }
     }
