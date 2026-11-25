@@ -30,22 +30,20 @@ function updateLiveHud() {
     if (targetGradEl) targetGradEl.textContent = formattedTarget;
 
     const modeLabels = {
-        flat: 'Flat',
         hilly: 'Hilly',
         erg: 'ERG Lock'
     };
     const shortModeLabels = {
-        flat: 'Flat',
         hilly: 'Hilly',
         erg: 'ERG Lock'
     };
     const gradModeTagEl = document.getElementById('gradientModeTag');
-    if (gradModeTagEl) gradModeTagEl.textContent = modeLabels[state.resistanceMode] || 'Flat';
+    if (gradModeTagEl) gradModeTagEl.textContent = modeLabels[state.resistanceMode] || 'Hilly';
 
     const tlTitleEl = document.getElementById('timelineWorkoutTitle');
     if (tlTitleEl && state.workout) tlTitleEl.textContent = state.workout.name;
     const tlModeEl = document.getElementById('timelineResistanceModeBadge');
-    if (tlModeEl) tlModeEl.textContent = shortModeLabels[state.resistanceMode] || 'Flat';
+    if (tlModeEl) tlModeEl.textContent = shortModeLabels[state.resistanceMode] || 'Hilly';
     const tlValEl = document.getElementById('timelineResistanceValue');
     if (tlValEl) tlValEl.textContent = state.resistanceMode === 'erg' ? `${targetWatts}W` : formattedSlope;
     const tlTargetEl = document.getElementById('timelineResistanceTarget');
@@ -815,6 +813,7 @@ function resetWorkoutSession() {
     state.arrowHitsCount = 0;
     state.steerLeftPressed = false;
     state.steerRightPressed = false;
+    state.mouseSteerInput = 0;
     state.dragonSteerOffsetX = 0;
     state.dragonHeadingAngle = 0;
     state.dragonWorldX = getSimulatedTurnOffsetX(0);

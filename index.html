@@ -54,7 +54,7 @@
     <section id="hudArenaCard" class="fixed inset-0 w-screen h-screen bg-gray-950 overflow-hidden z-0 transition-all duration-300 select-none">
 
         <!-- Three.js Full-Window WebGL Viewport Container -->
-        <div id="threeCanvasContainer" class="absolute inset-0 w-screen h-screen z-0"></div>
+        <div id="threeCanvasContainer" class="absolute inset-0 w-screen h-screen z-0 touch-none"></div>
 
         <!-- Floating Score Popups Container -->
         <div id="floatingScoreContainer" class="absolute inset-0 pointer-events-none z-30 overflow-hidden"></div>
@@ -1283,15 +1283,12 @@
                     <span class="text-gray-500">W</span>
                 </div>
 
-                <!-- Resistance / Gradient Mode Setting -->
-                <div class="flex items-center gap-1.5 bg-gray-950/90 border border-gray-800 rounded-xl px-2.5 py-1.5">
-                    <label for="resistanceModeSelect" class="text-xs text-gray-400 font-medium">Mode:</label>
-                    <select id="resistanceModeSelect" class="bg-transparent text-xs font-bold text-blue-400 focus:outline-none cursor-pointer">
-                        <option value="flat" class="bg-gray-900 text-blue-400" selected>Flat</option>
-                        <option value="hilly" class="bg-gray-900 text-blue-300">Hilly</option>
-                        <option value="erg" class="bg-gray-900 text-blue-300">ERG Lock</option>
-                    </select>
-                </div>
+                <!-- ERG Lock Toggle -->
+                <label id="ergLockToggleWrapper" for="ergLockCheck"
+                       class="flex items-center gap-2 bg-gray-950/90 border border-gray-800 rounded-xl px-2.5 py-1.5 text-xs cursor-pointer select-none">
+                    <input id="ergLockCheck" type="checkbox" class="w-3.5 h-3.5 accent-blue-400 rounded cursor-pointer">
+                    <span class="font-bold text-blue-300">ERG Lock</span>
+                </label>
             </div>
 
             <!-- Selected Workout Profile Preview Card -->
@@ -1741,12 +1738,12 @@
                             KICKR Arcade Pyramid
                         </h2>
                         <div id="timelineResistanceBanner" class="flex items-center gap-2 bg-gray-900/90 border border-blue-500/40 rounded-lg px-2.5 py-0.5">
-                            <span id="timelineResistanceModeBadge" class="text-[10px] font-black text-blue-300">Easy</span>
+                            <span id="timelineResistanceModeBadge" class="text-[10px] font-black text-blue-300">Hilly</span>
                             <span id="timelineResistanceValue" class="text-xs font-black font-mono text-white">0.0%</span>
-                            <span id="timelineResistanceTarget" class="text-[10px] font-mono text-gray-400 hidden sm:inline">Flat 0.0%</span>
+                            <span id="timelineResistanceTarget" class="text-[10px] font-mono text-gray-400 hidden sm:inline">Target Slope: 0.0%</span>
                             <span id="currentGradientDisplay" class="hidden">0.0%</span>
                             <span id="targetGradientLabel" class="hidden">Target Slope: 0.0%</span>
-                            <span id="gradientModeTag" class="hidden">Easy</span>
+                            <span id="gradientModeTag" class="hidden">Hilly</span>
                         </div>
                     </div>
 

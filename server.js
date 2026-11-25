@@ -13,13 +13,12 @@ const MAX_GHOST_FILE_BYTES = 5 * 1024 * 1024;
 const GHOST_FILE_FORMAT = 'loop-kicker-journey-ghost';
 const GHOST_FILE_VERSION = 2;
 const GHOST_MAX_SECONDS = 6 * 3600;
-const RESISTANCE_MODES = new Set(['flat', 'hilly', 'erg']);
+const RESISTANCE_MODES = new Set(['hilly', 'erg']);
 const WORKOUT_KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{0,79}$/i;
 
 function normalizeResistanceMode(mode) {
-    if (mode === 'flat' || mode === 'easy') return 'flat';
-    if (mode === 'hilly' || mode === 'medium' || mode === 'difficult' || mode === 'realistic') return 'hilly';
     if (mode === 'erg') return 'erg';
+    if (mode === 'hilly' || mode === 'flat' || mode === 'easy' || mode === 'medium' || mode === 'difficult' || mode === 'realistic') return 'hilly';
     return null;
 }
 

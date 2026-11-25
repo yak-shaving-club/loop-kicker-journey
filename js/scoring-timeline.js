@@ -66,6 +66,7 @@ function setScreen(screenName) {
     state.currentScreen = target;
     state.steerLeftPressed = false;
     state.steerRightPressed = false;
+    state.mouseSteerInput = 0;
     updateHeaderAndSetupVisibility();
     // The flight screen has no start/pause control: entering it always starts or resumes the flight
     if (target === 'game') {

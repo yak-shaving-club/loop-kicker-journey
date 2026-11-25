@@ -17,7 +17,7 @@ const state = {
     avatarType: 'aero_wyvern',
     ftp: 200,
     donutVisualSizeBoost: 1.0,
-    resistanceMode: 'flat',
+    resistanceMode: 'hilly',
     currentGradientPct: 0.0,
     targetGradientPct: 0.0,
     gradientProfile: [],
@@ -62,6 +62,7 @@ const state = {
     steeringEnabled: true,
     steerLeftPressed: false,
     steerRightPressed: false,
+    mouseSteerInput: 0.0,
     bleSteerInput: 0.0,
     bleSteerAngleDeg: 0.0,
     phoneSteerInput: 0.0,
@@ -143,9 +144,8 @@ function getGateSpacingZForGrade(gradientPct = 0) {
 }
 
 function normalizeResistanceMode(mode) {
-    if (mode === 'flat' || mode === 'easy') return 'flat';
-    if (mode === 'hilly' || mode === 'medium' || mode === 'difficult' || mode === 'realistic') return 'hilly';
     if (mode === 'erg') return 'erg';
+    if (mode === 'hilly' || mode === 'flat' || mode === 'easy' || mode === 'medium' || mode === 'difficult' || mode === 'realistic') return 'hilly';
     return null;
 }
 
@@ -185,7 +185,7 @@ const hillyTerrainCache = new Map();
 
 function generateTerrainGradientProfile(totalDurationSec, mode, workoutKey = '') {
     const total = Math.max(1, Math.ceil(totalDurationSec));
-    const normalizedMode = normalizeResistanceMode(mode) || 'flat';
+    const normalizedMode = normalizeResistanceMode(mode) || 'hilly';
 
     if (normalizedMode === 'hilly') {
         const cacheKey = `${workoutKey}|${total}`;
@@ -430,14 +430,21 @@ function getDonutRadiusForTargetWatts(targetWatts, ftp, gradientPct = 0) {
 }
 
 /**
- * Simulates dynamic, non-periodic random left and right canyon turns along the forward Z axis.
- * Uses a variable-length random-walk cubic Hermite waypoint spline layered with multi-scale
- * hashed quintic value noise so canyon directions feel genuinely random rather than a waveform.
+ * Simulates dynamic, non-periodic left and right canyon turns along the forward Z axis.
+ * Generated once per workout (seeded by workoutKey) and cached so the same workout always
+ * uses the exact same canyon shape.
  */
-let canyonCourseSeed = (Math.floor(Math.random() * 0x7fffffff) || 133742);
+const canyonPathCache = new Map();
+let activeCanyonCacheEntry = null;
+let canyonCourseSeed = 133742;
 let canyonWaypoints = [];
 let canyonMinGeneratedZ = 0;
 let canyonMaxGeneratedZ = 0;
+
+function getCanyonSeedForWorkoutKey(workoutKey = '') {
+    const key = workoutKey || 'default-canyon';
+    return (hashStringToSeed(`canyon-turns|${key}`) & 0x7fffffff) || 133742;
+}
 
 function canyonHashUnit(index, channel = 0) {
     let h = Math.imul((index | 0) ^ Math.imul(channel | 0, 0x9e3779b9), 0x85ebca6b);
@@ -571,15 +578,47 @@ function ensureCanyonWaypointsCoverZ(targetZ) {
     if (changed) {
         recomputeCanyonWaypointTangents();
     }
+    if (activeCanyonCacheEntry) {
+        activeCanyonCacheEntry.waypoints = canyonWaypoints;
+        activeCanyonCacheEntry.minGeneratedZ = canyonMinGeneratedZ;
+        activeCanyonCacheEntry.maxGeneratedZ = canyonMaxGeneratedZ;
+    }
 }
 
 function regenerateRandomCanyonPath(newSeed = null) {
-    canyonCourseSeed = (newSeed !== null && Number.isFinite(newSeed))
-        ? (Math.floor(newSeed) || 133742)
-        : (Math.floor(Math.random() * 0x7fffffff) || 133742);
+    if (newSeed !== null && Number.isFinite(newSeed)) {
+        activeCanyonCacheEntry = null;
+        canyonCourseSeed = Math.floor(newSeed) || 133742;
+        canyonWaypoints = [];
+        canyonMinGeneratedZ = 0;
+        canyonMaxGeneratedZ = 0;
+        ensureCanyonWaypointsCoverZ(-3600);
+        ensureCanyonWaypointsCoverZ(800);
+        return;
+    }
+
+    const cacheKey = state.workout ? (getWorkoutKey() || 'default-canyon') : 'default-canyon';
+    const cached = canyonPathCache.get(cacheKey);
+    if (cached) {
+        activeCanyonCacheEntry = cached;
+        canyonCourseSeed = cached.seed;
+        canyonWaypoints = cached.waypoints;
+        canyonMinGeneratedZ = cached.minGeneratedZ;
+        canyonMaxGeneratedZ = cached.maxGeneratedZ;
+        return;
+    }
+
+    canyonCourseSeed = getCanyonSeedForWorkoutKey(cacheKey);
     canyonWaypoints = [];
     canyonMinGeneratedZ = 0;
     canyonMaxGeneratedZ = 0;
+    activeCanyonCacheEntry = {
+        seed: canyonCourseSeed,
+        waypoints: canyonWaypoints,
+        minGeneratedZ: 0,
+        maxGeneratedZ: 0
+    };
+    canyonPathCache.set(cacheKey, activeCanyonCacheEntry);
     ensureCanyonWaypointsCoverZ(-3600);
     ensureCanyonWaypointsCoverZ(800);
 }

@@ -3574,12 +3574,13 @@ class DragonSky3DEngine {
         const turnDelta = lookaheadCourseX - currentCourseX;
 
         const keyboardSteerInput = (state.steerRightPressed ? 1 : 0) - (state.steerLeftPressed ? 1 : 0);
+        const mouseSteerInput = state.mouseSteerInput || 0;
         const sensorSteerInput = bleSteeringSensor.connected
             ? (state.bleSteerInput || 0)
             : (phoneSteeringSensor.connected ? (state.phoneSteerInput || 0) : 0);
         const rawSteerInput = keyboardSteerInput !== 0
             ? keyboardSteerInput
-            : sensorSteerInput;
+            : (mouseSteerInput !== 0 ? mouseSteerInput : sensorSteerInput);
         const steerInput = state.steeringEnabled
             ? Math.max(-1, Math.min(1, rawSteerInput))
             : 0;
@@ -3615,7 +3616,7 @@ class DragonSky3DEngine {
                 }
             }
 
-            const useDirectPhoneHeading = phoneSteeringSensor.connected && !bleSteeringSensor.connected && keyboardSteerInput === 0;
+            const useDirectPhoneHeading = phoneSteeringSensor.connected && !bleSteeringSensor.connected && keyboardSteerInput === 0 && mouseSteerInput === 0;
             const minHeading = canyonTangentHeading - DRAGON_MAX_HEADING_ANGLE;
             const maxHeading = canyonTangentHeading + DRAGON_MAX_HEADING_ANGLE;
 

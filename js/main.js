@@ -108,6 +108,7 @@ function setSteeringEnabled(enabled) {
     localStorage.setItem('loop_kicker_journey_steering_enabled', state.steeringEnabled ? 'true' : 'false');
     state.steerLeftPressed = false;
     state.steerRightPressed = false;
+    state.mouseSteerInput = 0;
 
     const mainCheck = document.getElementById('steeringToggleCheck');
     const compactCheck = document.getElementById('compactSteeringToggleCheck');
@@ -202,7 +203,126 @@ window.addEventListener('keyup', (e) => {
 window.addEventListener('blur', () => {
     state.steerLeftPressed = false;
     state.steerRightPressed = false;
+    state.mouseSteerInput = 0;
 });
+
+// Mouse drag controls on the 3D arena:
+// - Drag up/down adjusts simulated watts when Sim Mode is ON
+// - Drag left/right steers when Steering is ON
+(function initCanvasMouseDragControls() {
+    const canvasContainer = document.getElementById('threeCanvasContainer');
+    if (!canvasContainer) return;
+
+    const WATTS_PER_PIXEL = 1.0;
+    const WATT_DRAG_THRESHOLD_PX = 2;
+    const STEER_DEADZONE_PX = 4;
+    const STEER_FULL_RANGE_PX = 120;
+
+    let activePointerId = null;
+    let lastClientY = 0;
+    let startClientY = 0;
+    let wattsDragEngaged = false;
+    let pendingWattsFloat = 0;
+    let steerAnchorX = 0;
+
+    function endDrag() {
+        if (activePointerId === null) return;
+        if (canvasContainer.hasPointerCapture && canvasContainer.hasPointerCapture(activePointerId)) {
+            try {
+                canvasContainer.releasePointerCapture(activePointerId);
+            } catch (_) {}
+        }
+        activePointerId = null;
+        wattsDragEngaged = false;
+        state.mouseSteerInput = 0;
+        canvasContainer.style.cursor = '';
+    }
+
+    canvasContainer.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        if (state.currentScreen !== 'game') return;
+        if (!state.simMode && !state.steeringEnabled) return;
+
+        activePointerId = e.pointerId;
+        startClientY = e.clientY;
+        lastClientY = e.clientY;
+        wattsDragEngaged = false;
+        pendingWattsFloat = Number(state.actualWatts) || 0;
+        steerAnchorX = e.clientX;
+        state.mouseSteerInput = 0;
+
+        if (canvasContainer.setPointerCapture) {
+            try {
+                canvasContainer.setPointerCapture(activePointerId);
+            } catch (_) {}
+        }
+        canvasContainer.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+
+    window.addEventListener('pointermove', (e) => {
+        if (activePointerId === null || e.pointerId !== activePointerId) return;
+        if (state.currentScreen !== 'game') {
+            endDrag();
+            return;
+        }
+
+        if (state.simMode) {
+            const dy = e.clientY - lastClientY;
+            lastClientY = e.clientY;
+            if (!wattsDragEngaged && Math.abs(e.clientY - startClientY) >= WATT_DRAG_THRESHOLD_PX) {
+                wattsDragEngaged = true;
+                pendingWattsFloat = Number(state.actualWatts) || 0;
+                setSimAutoFollow(false);
+            }
+            if (wattsDragEngaged && dy !== 0) {
+                const slider = document.getElementById('simWattSlider');
+                const minW = slider ? (parseInt(slider.min, 10) || 0) : 0;
+                const maxW = slider ? (parseInt(slider.max, 10) || 650) : 650;
+                pendingWattsFloat = Math.max(minW, Math.min(maxW, pendingWattsFloat - dy * WATTS_PER_PIXEL));
+                const nextWatts = Math.round(pendingWattsFloat);
+                if (nextWatts !== state.actualWatts) {
+                    state.actualWatts = nextWatts;
+                    if (slider) slider.value = nextWatts;
+                    const readout = document.getElementById('simWattReadout');
+                    if (readout) readout.textContent = `${nextWatts} W`;
+                    syncZeroWattPauseState();
+                    updateLiveHud();
+                }
+            }
+        }
+
+        if (state.steeringEnabled) {
+            let dx = e.clientX - steerAnchorX;
+            if (Math.abs(dx) > STEER_FULL_RANGE_PX) {
+                steerAnchorX = e.clientX - Math.sign(dx) * STEER_FULL_RANGE_PX;
+                dx = e.clientX - steerAnchorX;
+            }
+            if (Math.abs(dx) <= STEER_DEADZONE_PX) {
+                state.mouseSteerInput = 0;
+            } else {
+                const effectiveDx = Math.sign(dx) * (Math.abs(dx) - STEER_DEADZONE_PX);
+                state.mouseSteerInput = Math.max(-1, Math.min(1, effectiveDx / (STEER_FULL_RANGE_PX - STEER_DEADZONE_PX)));
+            }
+        } else {
+            state.mouseSteerInput = 0;
+        }
+    });
+
+    window.addEventListener('pointerup', (e) => {
+        if (activePointerId !== null && e.pointerId === activePointerId) {
+            endDrag();
+        }
+    });
+
+    window.addEventListener('pointercancel', (e) => {
+        if (activePointerId !== null && e.pointerId === activePointerId) {
+            endDrag();
+        }
+    });
+
+    window.addEventListener('blur', endDrag);
+})();
 
 function isBlePairingCancelledError(err) {
     if (!err) return false;
@@ -482,14 +602,18 @@ function regenerateSessionWindProfile() {
     updateLiveHud();
 }
 
-document.getElementById('resistanceModeSelect').addEventListener('change', (e) => {
-    if (state.ghost && state.ghost.resistanceMode !== null) {
-        e.target.value = state.ghost.resistanceMode;
-        return;
-    }
-    state.resistanceMode = normalizeResistanceMode(e.target.value) || 'flat';
-    regenerateSessionWindProfile();
-});
+const ergLockCheckEl = document.getElementById('ergLockCheck');
+if (ergLockCheckEl) {
+    ergLockCheckEl.checked = state.resistanceMode === 'erg';
+    ergLockCheckEl.addEventListener('change', (e) => {
+        if (state.ghost && state.ghost.resistanceMode !== null) {
+            e.target.checked = state.ghost.resistanceMode === 'erg';
+            return;
+        }
+        state.resistanceMode = e.target.checked ? 'erg' : 'hilly';
+        regenerateSessionWindProfile();
+    });
+}
 
 document.getElementById('simToggleBtn').addEventListener('click', () => toggleSimMode());
 
@@ -682,11 +806,10 @@ function drawBottomTimelineOverlayOnScreenshot(ctx, width, height, pxRatio) {
 
     // Resistance Mode & Slope / ERG Pill
     const shortModeLabels = {
-        flat: 'Flat',
         hilly: 'Hilly',
         erg: 'ERG Lock'
     };
-    const modeLabel = shortModeLabels[state.resistanceMode] || 'Flat';
+    const modeLabel = shortModeLabels[state.resistanceMode] || 'Hilly';
     const targetWatts = getTargetWattsAtSecond(state.workout, state.elapsedSec, state.ftp);
     const gradSign = state.currentGradientPct > 0 ? '+' : '';
     const targetGradSign = state.targetGradientPct > 0 ? '+' : '';

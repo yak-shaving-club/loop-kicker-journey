@@ -6,7 +6,7 @@ const GHOST_FILE_VERSION = 2;
 // Version 1 samples also stored cumulative distance: [workoutSecond, watts, distanceMeters, score]
 const GHOST_LEGACY_FILE_VERSION = 1;
 const GHOST_MAX_SECONDS = 6 * 3600;
-const GHOST_RESISTANCE_MODES = new Set(['flat', 'hilly', 'erg']);
+const GHOST_RESISTANCE_MODES = new Set(['hilly', 'erg']);
 // Only Hilly mode has a non-flat terrain profile
 const GHOST_WIND_COURSE_MODES = new Set(['hilly']);
 
@@ -142,20 +142,26 @@ function updateGhostUI() {
     renderWorkoutGhostRides();
 }
 
-// Replaying a ghost ride uses the mode it was recorded in (Flat, Hilly, or ERG Lock)
+// Replaying a ghost ride uses the mode it was recorded in (Hilly or ERG Lock)
 function syncResistanceModeLock() {
-    const select = document.getElementById('resistanceModeSelect');
-    if (!select) return;
+    const checkbox = document.getElementById('ergLockCheck');
+    const wrapper = document.getElementById('ergLockToggleWrapper');
+    if (!checkbox) return;
     const locked = Boolean(state.ghost && state.ghost.resistanceMode !== null);
     if (locked) {
         state.resistanceMode = state.ghost.resistanceMode;
-        select.value = state.ghost.resistanceMode;
     }
-    select.disabled = locked;
-    select.classList.toggle('opacity-60', locked);
-    select.classList.toggle('cursor-not-allowed', locked);
-    select.classList.toggle('cursor-pointer', !locked);
-    select.title = locked ? 'Mode is fixed by the loaded ghost ride' : '';
+    checkbox.checked = state.resistanceMode === 'erg';
+    checkbox.disabled = locked;
+    if (wrapper) {
+        wrapper.classList.toggle('opacity-60', locked);
+        wrapper.classList.toggle('cursor-not-allowed', locked);
+        wrapper.classList.toggle('cursor-pointer', !locked);
+        wrapper.title = locked ? 'Mode is fixed by the loaded ghost ride' : '';
+    }
+    checkbox.classList.toggle('cursor-not-allowed', locked);
+    checkbox.classList.toggle('cursor-pointer', !locked);
+    checkbox.title = locked ? 'Mode is fixed by the loaded ghost ride' : '';
 }
 
 function updateGhostHud() {
@@ -222,7 +228,8 @@ function loadGhostRideFromText(text, fileName = null) {
     const presetKey = selectPresetMatchingXml(ghost.workoutXml);
     if (ghost.resistanceMode !== null) {
         state.resistanceMode = ghost.resistanceMode;
-        document.getElementById('resistanceModeSelect').value = ghost.resistanceMode;
+        const ergCheck = document.getElementById('ergLockCheck');
+        if (ergCheck) ergCheck.checked = ghost.resistanceMode === 'erg';
     }
     loadWorkoutFromXml(ghost.workoutXml, presetKey);
     setGhostRide(ghost);
@@ -239,8 +246,8 @@ function loadGhostRideFromText(text, fileName = null) {
 // Best scores & ghost rides of the selected workout (Training Selection), served by server.js
 // -------------------------------------------------------------------------
 const GHOST_RIDES_API_URL = 'api/ghostrides';
-const GHOST_MODE_LABELS = { flat: 'Flat', hilly: 'Hilly', erg: 'ERG Lock' };
-const GHOST_MODE_ORDER = ['flat', 'hilly', 'erg'];
+const GHOST_MODE_LABELS = { hilly: 'Hilly', erg: 'ERG Lock' };
+const GHOST_MODE_ORDER = ['hilly', 'erg'];
 const GHOST_LEADERBOARD_SIZE = 3;
 const GHOST_RANK_MEDALS = ['🥇', '🥈', '🥉'];
 
