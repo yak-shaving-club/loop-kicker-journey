@@ -65,7 +65,7 @@ class BleHeartRateMonitor {
             this.hrChar = null;
             this.latestBpm = null;
             this.onHeartRate(null);
-            this.onStatus('disconnected', 'Pair HRM');
+            this.onStatus('disconnected', 'Pair');
         });
 
         this.server = await this.device.gatt.connect();
@@ -134,7 +134,7 @@ class BleCadenceSensor {
             this.cscChar = null;
             this.prevCrankRevs = null;
             this.prevCrankTime = null;
-            this.onStatus('disconnected', 'Pair Cadence');
+            this.onStatus('disconnected', 'Pair');
         });
 
         this.server = await this.device.gatt.connect();
@@ -227,7 +227,7 @@ class BleEliteSteeringSensor {
             this.challengeChar = null;
             this.latestAngleDeg = 0.0;
             this.onSteeringAngle(0.0, null);
-            this.onStatus('disconnected', 'Pair Sterzo / Rizer');
+            this.onStatus('disconnected', 'Pair');
         });
 
         this.server = await this.device.gatt.connect();
@@ -462,7 +462,7 @@ class BleEliteAriaFan {
             this.setupChar = null;
             this.controlChar = null;
             this.lastSpeed = null;
-            this.onStatus('disconnected', 'Pair Elite Aria');
+            this.onStatus('disconnected', 'Pair');
         });
 
         try {
@@ -659,7 +659,7 @@ class WahooKickrBluetooth {
             this.bikeDataChar = null;
             this.ftmsControlPoint = null;
             this.wahooControlPoint = null;
-            this.onStatus('disconnected', 'KICKR Disconnected');
+            this.onStatus('disconnected', 'Connect device');
         });
 
         this.server = await this.device.gatt.connect();

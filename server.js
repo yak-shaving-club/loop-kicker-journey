@@ -337,6 +337,7 @@ async function handleEscargozzledScoresApi(request, response) {
 
 function getStaticFile(pathname) {
     if (pathname === '/' || pathname === '/index.html' || pathname === '/loop-kicker-journey.html') return 'index.html';
+    if (pathname === '/version.txt') return 'version.txt';
     if (pathname === '/escargozzled/' || pathname === '/escargozzled/index.html') return 'escargozzled/index.html';
     if (/^\/escargozzled\/docs\/screenshots\/[a-z0-9-]+\.png$/i.test(pathname)) return pathname.slice(1);
     if (pathname === '/escargozzled/world3d.js') return pathname.slice(1);
@@ -358,6 +359,7 @@ function contentType(filePath) {
     if (filePath.endsWith('.css')) return 'text/css; charset=utf-8';
     if (filePath.endsWith('.svg')) return 'image/svg+xml';
     if (filePath.endsWith('.png')) return 'image/png';
+    if (filePath.endsWith('.txt')) return 'text/plain; charset=utf-8';
     return 'application/octet-stream';
 }
 

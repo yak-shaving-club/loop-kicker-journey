@@ -3,6 +3,22 @@
     50% { transform: translateY(-28px) scale(1.1); opacity: 1; }
     100% { transform: translateY(-56px) scale(0.95); opacity: 0; }
 }
+#blePairingButtonsGroup button[data-connection-status="connecting"] {
+    background-color: #fdba74;
+    border-color: #fb923c;
+    color: #431407;
+}
+#blePairingButtonsGroup button[data-connection-status="connected"] {
+    background-color: #16a34a;
+    border-color: #86efac;
+    color: #fff;
+}
+#blePairingButtonsGroup button[data-connection-status="connecting"]:hover {
+    background-color: #fed7aa;
+}
+#blePairingButtonsGroup button[data-connection-status="connected"]:hover {
+    background-color: #15803d;
+}
 @keyframes glow-border {
     0%, 100% { box-shadow: 0 0 18px rgba(59, 130, 246, 0.35), inset 0 0 15px rgba(59, 130, 246, 0.15); }
     50% { box-shadow: 0 0 36px rgba(59, 130, 246, 0.75), inset 0 0 28px rgba(59, 130, 246, 0.3); }

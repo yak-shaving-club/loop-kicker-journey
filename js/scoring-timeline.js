@@ -109,6 +109,25 @@ function getThreeSecondAverageKickrWatts(nowMs = performance.now()) {
     return Math.round(weightedSum / weightTotal);
 }
 
+function updatePairingButton(buttonId, textId, dotId, status, label) {
+    const btn = document.getElementById(buttonId);
+    const text = document.getElementById(textId);
+    const dot = document.getElementById(dotId);
+    if (text) text.textContent = label;
+    if (btn) {
+        btn.dataset.connectionStatus = status;
+        const statusLabel = { connecting: 'Connecting', connected: 'Connected', disconnected: 'Disconnected', error: 'Error' }[status] || status;
+        btn.setAttribute('aria-label', `${label} — ${statusLabel}`);
+    }
+    if (dot) {
+        dot.className = 'w-2 h-2 rounded-full shrink-0';
+        if (status === 'connecting') dot.classList.add('bg-orange-800', 'animate-pulse');
+        else if (status === 'connected') dot.classList.add('bg-green-100');
+        else if (status === 'error') dot.classList.add('bg-orange-300');
+        else dot.classList.add('bg-gray-300');
+    }
+}
+
 const bleHrmSensor = new BleHeartRateMonitor(
     (bpm) => {
         state.heartRate = (bpm !== null && bpm !== undefined && bpm > 0) ? Math.round(bpm) : null;
@@ -119,42 +138,13 @@ const bleHrmSensor = new BleHeartRateMonitor(
         updateLiveHud();
     },
     (status, label) => {
-        const btn = document.getElementById('connectHrmBleBtn');
-        const text = document.getElementById('bleHrmStatusText');
-        const dot = document.getElementById('bleHrmStatusDot');
-        if (text) text.textContent = label;
-        if (!btn || !dot) return;
-        if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
-        } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
-        } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
-            dot.className = 'w-2 h-2 rounded-full bg-gray-300';
-        }
+        updatePairingButton('connectHrmBleBtn', 'bleHrmStatusText', 'bleHrmStatusDot', status, label);
     }
 );
 
 const bleEliteAriaFan = new BleEliteAriaFan(
     (status, label) => {
-        const btn = document.getElementById('connectAriaBleBtn');
-        const text = document.getElementById('bleAriaStatusText');
-        const dot = document.getElementById('bleAriaStatusDot');
-        if (text) text.textContent = label;
-        if (!btn || !dot) return;
-        if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
-        } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
-        } else if (status === 'error') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
-            dot.className = 'w-2 h-2 rounded-full bg-blue-300';
-        } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
-            dot.className = 'w-2 h-2 rounded-full bg-gray-300';
-        }
+        updatePairingButton('connectAriaBleBtn', 'bleAriaStatusText', 'bleAriaStatusDot', status, label);
     }
 );
 
@@ -167,20 +157,7 @@ const bleCadenceSensor = new BleCadenceSensor(
         updateLiveHud();
     },
     (status, label) => {
-        const btn = document.getElementById('connectCadenceBleBtn');
-        const text = document.getElementById('bleCadenceStatusText');
-        const dot = document.getElementById('bleCadenceStatusDot');
-        if (text) text.textContent = label;
-        if (!btn || !dot) return;
-        if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
-        } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
-        } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
-            dot.className = 'w-2 h-2 rounded-full bg-gray-300';
-        }
+        updatePairingButton('connectCadenceBleBtn', 'bleCadenceStatusText', 'bleCadenceStatusDot', status, label);
     }
 );
 
@@ -196,20 +173,7 @@ const bleSteeringSensor = new BleEliteSteeringSensor(
         }
     },
     (status, label) => {
-        const btn = document.getElementById('connectSteerBleBtn');
-        const text = document.getElementById('bleSteerStatusText');
-        const dot = document.getElementById('bleSteerStatusDot');
-        if (text) text.textContent = label;
-        if (!btn || !dot) return;
-        if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
-        } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
-        } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
-            dot.className = 'w-2 h-2 rounded-full bg-gray-300';
-        }
+        updatePairingButton('connectSteerBleBtn', 'bleSteerStatusText', 'bleSteerStatusDot', status, label);
     }
 );
 
@@ -233,31 +197,23 @@ const phoneSteeringSensor = new PhoneWebRtcSteeringSensor(
         }
     },
     (status, label) => {
-        const btn = document.getElementById('connectPhoneSteerBtn');
-        const text = document.getElementById('phoneSteerStatusText');
-        const dot = document.getElementById('phoneSteerStatusDot');
         const modalStatus = document.getElementById('phoneSteerModalStatus');
         const disconnectBtn = document.getElementById('phoneSteerDisconnectBtn');
-        if (text) text.textContent = label;
+        updatePairingButton('connectPhoneSteerBtn', 'phoneSteerStatusText', 'phoneSteerStatusDot', status, label);
         if (status === 'connected') {
             if (!state.steeringEnabled) setSteeringEnabled(true);
-            if (btn) btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
-            if (dot) dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
             if (modalStatus) {
                 modalStatus.textContent = 'Phone connected! Turn handlebar to steer.';
                 modalStatus.className = 'font-bold text-blue-300';
             }
             if (disconnectBtn) disconnectBtn.classList.remove('hidden');
         } else if (status === 'connecting') {
-            if (dot) dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
             if (modalStatus) {
                 modalStatus.textContent = 'Waiting for phone to scan QR code...';
                 modalStatus.className = 'font-bold text-blue-300';
             }
             if (disconnectBtn) disconnectBtn.classList.add('hidden');
         } else {
-            if (btn) btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
-            if (dot) dot.className = 'w-2 h-2 rounded-full bg-gray-300';
             if (modalStatus) {
                 modalStatus.textContent = 'Disconnected. Scan QR code to connect.';
                 modalStatus.className = 'font-bold text-gray-400';
@@ -287,19 +243,7 @@ const bleTrainer = new WahooKickrBluetooth(
         updateLiveHud();
     },
     (status, label) => {
-        const btn = document.getElementById('connectBleBtn');
-        const text = document.getElementById('bleStatusText');
-        const dot = document.getElementById('bleStatusDot');
-        text.textContent = label;
-        if (status === 'connected') {
-            btn.className = 'px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
-        } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
-        } else {
-            btn.className = 'px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30';
-            dot.className = 'w-2 h-2 rounded-full bg-gray-300';
-        }
+        updatePairingButton('connectBleBtn', 'bleStatusText', 'bleStatusDot', status, label);
     }
 );
 
@@ -323,20 +267,7 @@ const bleRower = new BleConcept2Rower(
         updateLiveHud();
     },
     (status, label) => {
-        const btn = document.getElementById('connectRowerBleBtn');
-        const text = document.getElementById('bleRowerStatusText');
-        const dot = document.getElementById('bleRowerStatusDot');
-        if (text) text.textContent = label;
-        if (!btn || !dot) return;
-        if (status === 'connected') {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40';
-            dot.className = 'w-2 h-2 rounded-full bg-blue-200 animate-ping';
-        } else if (status === 'connecting') {
-            dot.className = 'w-2 h-2 rounded-full bg-blue-300 animate-pulse';
-        } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30';
-            dot.className = 'w-2 h-2 rounded-full bg-gray-300';
-        }
+        updatePairingButton('connectRowerBleBtn', 'bleRowerStatusText', 'bleRowerStatusDot', status, label);
     }
 );
 

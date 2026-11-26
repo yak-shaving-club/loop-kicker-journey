@@ -1,6 +1,24 @@
 // =========================================================================
 // 10. EVENT LISTENERS, SPACEBAR OBSTACLE DEFENSE & INITIALIZATION
 // =========================================================================
+async function loadAppVersion() {
+    const versionBadge = document.getElementById('appVersionBadge');
+    if (!versionBadge) return;
+
+    try {
+        const response = await fetch('/version.txt', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Version request failed with HTTP ${response.status}`);
+        const version = (await response.text()).trim();
+        if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid version format');
+        versionBadge.textContent = `Version ${version}`;
+    } catch (error) {
+        versionBadge.textContent = 'Version unavailable';
+        console.error('Could not load application version:', error);
+    }
+}
+
+loadAppVersion();
+
 function applyFtpWatts(rawValue, persist = true) {
     const val = parseInt(rawValue, 10);
     if (!isNaN(val) && val >= 50 && val <= 600) {
@@ -337,7 +355,7 @@ function isBlePairingCancelledError(err) {
 const BLE_KNOWN_DEVICES_STORAGE_KEY = 'loop_kicker_journey_ble_known_devices';
 const bleRoles = {
     trainer: {
-        sensor: bleTrainer, buttonId: 'connectBleBtn', idleLabel: 'Connect Wahoo KICKR',
+        sensor: bleTrainer, buttonId: 'connectBleBtn', idleLabel: 'Connect device',
         errorMsg: 'Could not connect to Wahoo KICKR via Bluetooth.',
         afterConnect: () => { if (state.simMode) toggleSimMode(false); }
     },
@@ -347,20 +365,20 @@ const bleRoles = {
         afterConnect: () => { if (state.simMode) toggleSimMode(false); }
     },
     hrm: {
-        sensor: bleHrmSensor, buttonId: 'connectHrmBleBtn', idleLabel: 'Pair HRM',
+        sensor: bleHrmSensor, buttonId: 'connectHrmBleBtn', idleLabel: 'Pair',
         errorMsg: 'Could not connect to BLE Heart Rate Monitor.'
     },
     aria: {
-        sensor: bleEliteAriaFan, buttonId: 'connectAriaBleBtn', idleLabel: 'Pair Elite Aria',
+        sensor: bleEliteAriaFan, buttonId: 'connectAriaBleBtn', idleLabel: 'Pair',
         errorMsg: 'Could not connect to Elite Aria via Bluetooth.',
         afterConnect: () => bleEliteAriaFan.setHeartRate(bleHrmSensor.connected ? state.heartRate : null)
     },
     cadence: {
-        sensor: bleCadenceSensor, buttonId: 'connectCadenceBleBtn', idleLabel: 'Pair Cadence',
+        sensor: bleCadenceSensor, buttonId: 'connectCadenceBleBtn', idleLabel: 'Pair',
         errorMsg: 'Could not connect to BLE Cadence Sensor.'
     },
     steer: {
-        sensor: bleSteeringSensor, buttonId: 'connectSteerBleBtn', idleLabel: 'Pair Sterzo / Rizer',
+        sensor: bleSteeringSensor, buttonId: 'connectSteerBleBtn', idleLabel: 'Pair',
         errorMsg: 'Could not connect to Elite Sterzo / Rizer steering device.',
         afterConnect: () => { if (!state.steeringEnabled) setSteeringEnabled(true); }
     }
@@ -390,10 +408,12 @@ async function connectBleRole(role, knownDevice = null) {
     bleRolesConnecting.add(role);
     try {
         if (knownDevice && !knownDevice.gatt.connected) {
+            cfg.sensor.onStatus('connecting', `Connecting ${knownDevice.name || cfg.idleLabel}...`);
             try {
                 await knownDevice.gatt.connect();
             } catch (err) {
                 console.debug(`[BLE auto-connect] ${role}: ${knownDevice.name || knownDevice.id} not reachable yet`, err);
+                cfg.sensor.onStatus('disconnected', cfg.idleLabel);
                 return;
             }
         }
@@ -542,6 +562,7 @@ document.getElementById('connectPhoneSteerBtn').addEventListener('click', async 
         const peerId = await phoneSteeringSensor.ensureHostPeer();
         renderPhoneSteerQrCode(peerId);
     } catch (err) {
+        phoneSteeringSensor.onStatus('error', 'Phone steering unavailable');
         const qrContainer = document.getElementById('phoneSteerQrContainer');
         if (qrContainer) {
             qrContainer.innerHTML = `<span class="text-xs text-blue-500 font-bold p-2">${err.message || 'Could not start WebRTC peer.'}</span>`;

@@ -144,6 +144,8 @@ function updateStreakBar() {
     // Jump back instantly on reset/break instead of animating the bar backwards
     fillEl.style.transition = pct < prevPct ? 'none' : '';
     fillEl.style.width = `${pct}%`;
+    const redness = Math.min(streak / (RING_STREAK_MILESTONE * 4), 1);
+    fillEl.style.backgroundColor = `hsl(0 90% ${75 - redness * 33}%)`;
 
     if (nextEl) {
         const currentTier = Math.floor(streak / RING_STREAK_MILESTONE);

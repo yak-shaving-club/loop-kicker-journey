@@ -1020,6 +1020,9 @@
                 <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-blue-300">
                     Loop Kicker Journey
                 </h1>
+                <p id="appVersionBadge" class="mt-1 text-[11px] font-mono font-semibold text-blue-200/75" aria-live="polite">
+                    Version loading...
+                </p>
                 <p class="mt-2 text-xs sm:text-sm text-gray-300 max-w-xl mx-auto leading-relaxed">
                     Pair your smart trainer or sensors, load a structured workout or Zwift <code class="text-blue-300 font-mono">.zwo</code> file, pick your 3D flying avatar, and soar through high-altitude target-watt donut gates.
                 </p>
@@ -1084,11 +1087,11 @@
                         <div class="flex flex-col justify-between gap-2 bg-gray-950/80 border border-gray-800 rounded-xl p-2.5">
                             <div>
                                 <div class="text-xs font-bold text-gray-100">Smart Trainer</div>
-                                <div class="text-[11px] text-gray-400">KICKR / FTMS Power &amp; ERG</div>
+                                <div class="text-[11px] text-gray-400">FTMS device (transmit power, speed, and cadence)</div>
                             </div>
                             <button id="connectBleBtn" type="button"
                                     class="w-full px-3 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between gap-1.5 transition cursor-pointer shadow-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30">
-                                <span id="bleStatusText">Connect Wahoo KICKR</span>
+                                <span id="bleStatusText">Connect device</span>
                                 <span id="bleStatusDot" class="w-2 h-2 rounded-full bg-gray-300 shrink-0"></span>
                             </button>
                         </div>
@@ -1116,7 +1119,7 @@
                             <button id="connectHrmBleBtn" type="button"
                                     class="w-full px-3 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30"
                                     title="Pair BLE Heart Rate Monitor (e.g. Garmin HRM 200)">
-                                <span id="bleHrmStatusText">Pair HRM</span>
+                                <span id="bleHrmStatusText">Pair</span>
                                 <span id="bleHrmStatusDot" class="w-2 h-2 rounded-full bg-gray-300 shrink-0"></span>
                             </button>
                         </div>
@@ -1130,7 +1133,7 @@
                             <button id="connectAriaBleBtn" type="button"
                                     class="w-full px-3 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30"
                                     title="Pair Elite Aria Smart Fan; fan speed follows heart rate (80-180 bpm)">
-                                <span id="bleAriaStatusText">Pair Elite Aria</span>
+                                <span id="bleAriaStatusText">Pair</span>
                                 <span id="bleAriaStatusDot" class="w-2 h-2 rounded-full bg-gray-300 shrink-0"></span>
                             </button>
                         </div>
@@ -1144,7 +1147,7 @@
                             <button id="connectCadenceBleBtn" type="button"
                                     class="w-full px-3 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30"
                                     title="Pair BLE Cadence Sensor">
-                                <span id="bleCadenceStatusText">Pair Cadence</span>
+                                <span id="bleCadenceStatusText">Pair</span>
                                 <span id="bleCadenceStatusDot" class="w-2 h-2 rounded-full bg-gray-300 shrink-0"></span>
                             </button>
                         </div>
@@ -1158,7 +1161,7 @@
                             <button id="connectSteerBleBtn" type="button"
                                     class="w-full px-3 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between gap-1.5 transition cursor-pointer shadow-md bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/30"
                                     title="Pair Elite Sterzo Smart or Elite Rizer for BLE Steering">
-                                <span id="bleSteerStatusText">Pair Sterzo / Rizer</span>
+                                <span id="bleSteerStatusText">Pair</span>
                                 <span id="bleSteerStatusDot" class="w-2 h-2 rounded-full bg-gray-300 shrink-0"></span>
                             </button>
                         </div>
@@ -1714,9 +1717,9 @@
         <div class="flex flex-col gap-2 w-full max-w-[1600px] mx-auto pointer-events-none">
 
             <!-- Streak Progress Bar: fills up to the next ring-streak bonus -->
-            <section id="streakBarHud" class="relative h-7 sm:h-8 rounded-xl overflow-hidden bg-gray-950/75 backdrop-blur-md border border-blue-500/40 shadow-xl pointer-events-auto"
+            <section id="streakBarHud" class="relative h-7 sm:h-8 rounded-xl overflow-hidden bg-gray-950/75 backdrop-blur-md border border-red-500/40 shadow-xl pointer-events-auto"
                      title="In-zone streak — every 15 consecutive rings earns a growing bonus">
-                <div id="streakBarFill" class="absolute inset-y-0 left-0 bg-blue-400 transition-[width] duration-700 ease-linear" style="width: 0%"></div>
+                <div id="streakBarFill" class="absolute inset-y-0 left-0 transition-[width] duration-700 ease-linear" style="width: 0%; background-color: hsl(0 90% 75%)"></div>
                 <div class="streak-bar-ticks absolute inset-0" aria-hidden="true"></div>
                 <div class="relative h-full flex items-center justify-between gap-3 px-3 font-mono font-black uppercase tracking-wider text-[11px] sm:text-xs text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
                     <span class="flex items-center gap-1.5">
